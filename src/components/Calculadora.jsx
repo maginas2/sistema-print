@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { fmt } from '../utils/fmt';
 import { gerarPDF } from '../utils/pdf';
 
-export default function Calculadora({ produtos, produtoInicial }) {
+export default function Calculadora({ produtos, produtoInicial, onSalvarHistorico }) {
   const [cliente, setCliente] = useState('');
   const [numero, setNumero]   = useState('');
   const [catalogoId, setCatalogoId] = useState('');
@@ -80,12 +80,15 @@ export default function Calculadora({ produtos, produtoInicial }) {
   async function handleGerarPDF() {
     const todosItens = [...itens, ...(resultado ? [resultado] : [])];
     if (todosItens.length === 0) return;
-    await gerarPDF({
+    const dadosOrcamento = {
       cliente: cliente.trim() || 'Não informado',
       numero: numero.trim() || '—',
       data: new Date().toLocaleDateString('pt-BR'),
       itens: todosItens,
-    });
+      total: todosItens.reduce((s, i) => s + i.total, 0),
+    };
+    await gerarPDF(dadosOrcamento);
+    onSalvarHistorico?.(dadosOrcamento);
   }
 
   const totalGeral = itens.reduce((s, i) => s + i.total, 0);

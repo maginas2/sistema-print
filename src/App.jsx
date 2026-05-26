@@ -1,10 +1,13 @@
 import { useState, useRef } from 'react';
 import { useProdutos } from './hooks/useProdutos';
+import { useHistorico } from './hooks/useHistorico';
 import Calculadora from './components/Calculadora';
 import Produtos from './components/Produtos';
+import Dashboard from './components/Dashboard';
 import printLogo from './assets/print logo.png';
 
 const ICONS = {
+  dash: <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>,
   calc: <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>,
   prod: <svg viewBox="0 0 24 24"><path d="M19 5v14H5V5h14m0-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM14 17H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>,
   arrow: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>,
@@ -12,13 +15,15 @@ const ICONS = {
 };
 
 const PAGE_META = {
-  calculadora: { title: 'Calculadora de', highlight: 'Preços', desc: 'Calcule orçamentos por metro quadrado e gere PDFs profissionais.' },
+  dashboard:   { title: 'Visão',          highlight: 'Geral',    desc: 'Resumo de orçamentos, histórico e acesso rápido às funcionalidades.' },
+  calculadora: { title: 'Calculadora de', highlight: 'Preços',   desc: 'Calcule orçamentos por metro quadrado e gere PDFs profissionais.' },
   produtos:    { title: 'Tabela de',      highlight: 'Produtos', desc: 'Gerencie e organize sua tabela de produtos e preços.' },
 };
 
 export default function App() {
-  const [aba, setAba] = useState('calculadora');
+  const [aba, setAba] = useState('dashboard');
   const { produtos, adicionar, atualizar, remover } = useProdutos();
+  const { historico, salvarOrcamento, limparHistorico } = useHistorico();
   const produtoParaUsar = useRef(null);
 
   function usarNaCalculadora(p) {
@@ -37,6 +42,12 @@ export default function App() {
 
         <nav className="sidebar-nav">
           <p className="nav-section-label">Menu</p>
+
+          <button className={`nav-item${aba === 'dashboard' ? ' active' : ''}`} onClick={() => setAba('dashboard')}>
+            <span className="nav-icon">{ICONS.dash}</span>
+            <span className="nav-label">Visão Geral</span>
+            <span className="nav-arrow">{ICONS.arrow}</span>
+          </button>
 
           <button className={`nav-item${aba === 'calculadora' ? ' active' : ''}`} onClick={() => setAba('calculadora')}>
             <span className="nav-icon">{ICONS.calc}</span>
@@ -66,8 +77,17 @@ export default function App() {
           <p>{meta.desc}</p>
         </div>
 
+        <div className={`tab-panel${aba === 'dashboard' ? ' active' : ''}`}>
+          <Dashboard
+            historico={historico}
+            produtos={produtos}
+            onIrParaCalculadora={() => setAba('calculadora')}
+            onIrParaProdutos={() => setAba('produtos')}
+            onLimparHistorico={limparHistorico}
+          />
+        </div>
         <div className={`tab-panel${aba === 'calculadora' ? ' active' : ''}`}>
-          <Calculadora produtos={produtos} produtoInicial={produtoParaUsar} />
+          <Calculadora produtos={produtos} produtoInicial={produtoParaUsar} onSalvarHistorico={salvarOrcamento} />
         </div>
         <div className={`tab-panel${aba === 'produtos' ? ' active' : ''}`}>
           <Produtos

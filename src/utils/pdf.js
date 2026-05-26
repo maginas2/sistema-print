@@ -157,17 +157,6 @@ export async function gerarPDF({ cliente, numero, data, itens }) {
   doc.text(fmt(totalGeral), W - MR, y, { align: 'right' });
   y += 12;
 
-  // ── Observações ────────────────────────────────
-  if (y + 26 < LIMITE_Y) {
-    y += 4;
-    fill('#FFF8CC'); doc.roundedRect(ML, y, CW, 26, 3, 3, 'F');
-    draw('#F5C800'); doc.setLineWidth(0.4); doc.roundedRect(ML, y, CW, 26, 3, 3, 'S');
-    doc.setFont('helvetica', 'bold');   doc.setFontSize(9);   color('#92400E'); doc.text('Observações', ML + 4, y + 7);
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); color('#78350F');
-    doc.text('• Orçamento válido por 7 dias a partir da data de emissão.', ML + 4, y + 14);
-    doc.text('• Não inclui instalação, acabamentos ou frete, salvo quando especificado.', ML + 4, y + 20);
-  }
-
   // ── Rodapé (imagem) ────────────────────────────
   doc.addImage(imgRodape, 'JPEG', 0, 297 - RODAPE_H, W, RODAPE_H);
 
