@@ -5,9 +5,9 @@ export async function listar(req, res) {
 
   let query = supabase
     .from('orcamentos')
-    .select('id, cliente, numero, total, criado_em')
+    .select('id, cliente, numero, total, criado_em, status, usuarios(nome)')
     .order('criado_em', { ascending: false })
-    .limit(50);
+    .limit(200);
 
   if (perfil !== 'admin' && usuario_id) {
     query = query.eq('usuario_id', usuario_id);
@@ -34,10 +34,29 @@ export async function salvar(req, res) {
 
   const { data, error } = await supabase
     .from('orcamentos')
-    .insert([{ usuario_id: usuario_id || null, cliente, numero, total }])
-    .select('id, numero')
+    .insert([{ usuario_id: usuario_id || null, cliente, numero, total, status: 'pendente' }])
+    .select('id, numero, status')
     .single();
 
   if (error) return res.status(500).json({ erro: 'Erro ao salvar orçamento.' });
   return res.status(201).json({ orcamento: data });
+}
+
+export async function atualizarStatus(req, res) {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  if (!['pendente', 'concluido'].includes(status)) {
+    return res.status(400).json({ erro: 'Status inválido.' });
+  }
+
+  const { data, error } = await supabase
+    .from('orcamentos')
+    .update({ status })
+    .eq('id', id)
+    .select('id, status')
+    .single();
+
+  if (error) return res.status(500).json({ erro: 'Erro ao atualizar status.' });
+  return res.json({ orcamento: data });
 }

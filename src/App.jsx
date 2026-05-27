@@ -5,6 +5,8 @@ import Calculadora from './components/Calculadora';
 import Produtos from './components/Produtos';
 import Dashboard from './components/Dashboard';
 import Usuarios from './components/Usuarios';
+import Relatorios from './components/Relatorios';
+import Orcamentos from './components/Orcamentos';
 import Login from './components/Login';
 import printLogo from './assets/print logo.png';
 
@@ -15,14 +17,18 @@ const ICONS = {
   prod: <svg viewBox="0 0 24 24"><path d="M19 5v14H5V5h14m0-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM14 17H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>,
   arrow: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>,
   info: <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>,
-  sair: <svg viewBox="0 0 24 24"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>,
+  sair:  <svg viewBox="0 0 24 24"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>,
+  relat: <svg viewBox="0 0 24 24"><path d="M9 17H7v-3h2v3zm4 0h-2v-7h2v7zm4 0h-2v-5h2v5zm2 2H5V5h14v14zm0-16H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/></svg>,
+  orc:   <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11zM8 15h8v2H8zm0-4h8v2H8zm0-4h5v2H8z"/></svg>,
 };
 
 const PAGE_META = {
   dashboard:   { title: 'Visão',          highlight: 'Geral',    desc: 'Resumo de orçamentos, histórico e acesso rápido às funcionalidades.' },
   calculadora: { title: 'Calculadora de', highlight: 'Preços',   desc: 'Calcule orçamentos por metro quadrado e gere PDFs profissionais.' },
   produtos:    { title: 'Tabela de',      highlight: 'Produtos', desc: 'Gerencie e organize sua tabela de produtos e preços.' },
-  usuarios:    { title: 'Cadastro de',    highlight: 'Usuários', desc: 'Crie e gerencie os acessos ao sistema.' },
+  usuarios:    { title: 'Cadastro de',    highlight: 'Usuários',   desc: 'Crie e gerencie os acessos ao sistema.' },
+  relatorios:  { title: 'Relatórios de', highlight: 'Orçamentos', desc: 'Analise orçamentos por período, usuário e valor.' },
+  orcamentos:  { title: 'Gestão de',     highlight: 'Orçamentos', desc: 'Visualize, filtre e gerencie todos os orçamentos registrados.' },
 };
 
 function lerSessao() {
@@ -40,6 +46,17 @@ export default function App() {
   function handleLogin(u) {
     localStorage.setItem('print_usuario', JSON.stringify(u));
     setUsuario(u);
+  }
+
+  async function atualizarStatus(id, novoStatus) {
+    try {
+      await fetch(`http://localhost:3001/api/orcamentos/${id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: novoStatus }),
+      });
+      recarregar();
+    } catch { /* silently fail */ }
   }
 
   function handleLogout() {
@@ -89,6 +106,18 @@ export default function App() {
             <span className="nav-arrow">{ICONS.arrow}</span>
           </button>
 
+          <button className={`nav-item${aba === 'orcamentos' ? ' active' : ''}`} onClick={() => setAba('orcamentos')}>
+            <span className="nav-icon">{ICONS.orc}</span>
+            <span className="nav-label">Orçamentos</span>
+            <span className="nav-arrow">{ICONS.arrow}</span>
+          </button>
+
+          <button className={`nav-item${aba === 'relatorios' ? ' active' : ''}`} onClick={() => setAba('relatorios')}>
+            <span className="nav-icon">{ICONS.relat}</span>
+            <span className="nav-label">Relatórios</span>
+            <span className="nav-arrow">{ICONS.arrow}</span>
+          </button>
+
           {usuario.perfil === 'admin' && (
             <button className={`nav-item${aba === 'usuarios' ? ' active' : ''}`} onClick={() => setAba('usuarios')}>
               <span className="nav-icon">{ICONS.user}</span>
@@ -130,11 +159,25 @@ export default function App() {
             onIrParaProdutos={() => setAba('produtos')}
             onLimparHistorico={limparHistorico}
             onRecarregar={recarregar}
+            onAtualizarStatus={atualizarStatus}
             carregando={carregando}
+            usuario={usuario}
           />
         </div>
         <div className={`tab-panel${aba === 'calculadora' ? ' active' : ''}`}>
           <Calculadora produtos={produtos} produtoInicial={produtoParaUsar} onSalvarHistorico={salvarOrcamento} usuarioId={usuario.id} />
+        </div>
+        <div className={`tab-panel${aba === 'orcamentos' ? ' active' : ''}`}>
+          <Orcamentos
+            historico={historico}
+            onRecarregar={recarregar}
+            onAtualizarStatus={atualizarStatus}
+            carregando={carregando}
+            usuario={usuario}
+          />
+        </div>
+        <div className={`tab-panel${aba === 'relatorios' ? ' active' : ''}`}>
+          <Relatorios usuario={usuario} />
         </div>
         <div className={`tab-panel${aba === 'usuarios' ? ' active' : ''}`}>
           <Usuarios />

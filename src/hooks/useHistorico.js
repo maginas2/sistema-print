@@ -11,12 +11,14 @@ function carregarLocal() {
 
 function formatarDoBackend(registros) {
   return registros.map(o => ({
-    id: o.id,
-    cliente: o.cliente || 'Não informado',
-    numero: o.numero || '—',
-    data: new Date(o.criado_em).toLocaleDateString('pt-BR'),
-    itensCont: 0,
-    total: parseFloat(o.total) || 0,
+    id:           o.id,
+    cliente:      o.cliente || 'Não informado',
+    numero:       o.numero  || '—',
+    data:         new Date(o.criado_em).toLocaleDateString('pt-BR'),
+    itensCont:    0,
+    total:        parseFloat(o.total) || 0,
+    status:       o.status || 'pendente',
+    usuario_nome: o.usuarios?.nome || '—',
   }));
 }
 

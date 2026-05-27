@@ -1,15 +1,31 @@
 import { fmt } from '../utils/fmt';
 
-export default function Dashboard({ historico, produtos, onIrParaCalculadora, onIrParaProdutos, onLimparHistorico, onRecarregar, carregando }) {
+export default function Dashboard({
+  historico, produtos,
+  onIrParaCalculadora, onIrParaProdutos,
+  onLimparHistorico, onRecarregar, onAtualizarStatus,
+  carregando, usuario,
+}) {
+  const isAdmin        = usuario?.perfil === 'admin';
   const totalOrcamentos = historico.length;
-  const valorTotal = historico.reduce((s, o) => s + o.total, 0);
-  const ticketMedio = totalOrcamentos > 0 ? valorTotal / totalOrcamentos : 0;
-  const maxPreco = produtos.length > 0 ? Math.max(...produtos.map(p => p.preco)) : 1;
-  const ultimos = historico.slice(0, 10);
+  const valorTotal      = historico.reduce((s, o) => s + o.total, 0);
+  const ticketMedio     = totalOrcamentos > 0 ? valorTotal / totalOrcamentos : 0;
+  const maxPreco        = produtos.length > 0 ? Math.max(...produtos.map(p => p.preco)) : 1;
+  const ultimos         = historico.slice(0, 6);
+
+  const pendentes  = historico.filter(o => o.status === 'pendente').length;
+  const concluidos = historico.filter(o => o.status === 'concluido').length;
 
   function handleLimpar() {
     if (window.confirm('Limpar todo o histórico de orçamentos?')) onLimparHistorico();
   }
+
+  function toggleStatus(o) {
+    const novo = o.status === 'concluido' ? 'pendente' : 'concluido';
+    onAtualizarStatus(o.id, novo);
+  }
+
+  const wrapClass = `hist-wrap hist-status${isAdmin ? '-admin' : ''}`;
 
   return (
     <>
@@ -21,7 +37,7 @@ export default function Dashboard({ historico, produtos, onIrParaCalculadora, on
           </div>
           <div className="dash-stat-label">Orçamentos gerados</div>
           <div className="dash-stat-value">{totalOrcamentos}</div>
-          <div className="dash-stat-sub">{totalOrcamentos === 1 ? '1 registro' : `${totalOrcamentos} registros`} no histórico</div>
+          <div className="dash-stat-sub">{pendentes} pendente{pendentes !== 1 ? 's' : ''} · {concluidos} concluído{concluidos !== 1 ? 's' : ''}</div>
         </div>
 
         <div className="dash-stat">
@@ -69,16 +85,17 @@ export default function Dashboard({ historico, produtos, onIrParaCalculadora, on
               className="btn-limpar-hist"
               onClick={onRecarregar}
               disabled={carregando}
-              title="Atualizar do banco"
               style={{ opacity: carregando ? .5 : 1 }}
+              title="Atualizar"
             >
-              <svg viewBox="0 0 24 24" style={{ width: 13, height: 13, fill: 'currentColor', marginRight: 5, verticalAlign: 'middle', animation: carregando ? 'spin .8s linear infinite' : 'none' }}><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+              <svg viewBox="0 0 24 24" style={{ width: 13, height: 13, fill: 'currentColor', marginRight: 5, verticalAlign: 'middle', animation: carregando ? 'spin .8s linear infinite' : 'none' }}><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>
               {carregando ? 'Atualizando…' : 'Atualizar'}
             </button>
             {historico.length > 0 && (
-              <button className="btn-limpar-hist" onClick={handleLimpar}>Limpar tudo</button>
+              <button className="btn-limpar-hist" onClick={handleLimpar} style={{ marginLeft: 6 }}>Limpar tudo</button>
             )}
           </div>
+
           <div className="card-body" style={{ padding: ultimos.length > 0 ? 0 : undefined }}>
             {ultimos.length === 0 ? (
               <div className="empty-state">
@@ -86,20 +103,35 @@ export default function Dashboard({ historico, produtos, onIrParaCalculadora, on
                 <p>Nenhum orçamento gerado ainda.<br />Gere um PDF na calculadora para aparecer aqui.</p>
               </div>
             ) : (
-              <div className="hist-wrap">
+              <div className={wrapClass}>
                 <div className="hist-header">
                   <span>Cliente</span>
                   <span>Nº</span>
+                  {isAdmin && <span>Feito por</span>}
                   <span>Data</span>
-                  <span>Itens</span>
+                  <span>Status</span>
+                  <span>Ação</span>
                   <span style={{ textAlign: 'right' }}>Total</span>
                 </div>
                 {ultimos.map(o => (
                   <div key={o.id} className="hist-row">
                     <span className="hist-cliente">{o.cliente}</span>
                     <span className="hist-num">{o.numero}</span>
+                    {isAdmin && <span className="hist-data" style={{ fontWeight: 600, color: 'var(--gray-800)' }}>{o.usuario_nome}</span>}
                     <span className="hist-data">{o.data}</span>
-                    <span className="hist-itens">{o.itensCont} {o.itensCont === 1 ? 'item' : 'itens'}</span>
+                    <span>
+                      <span className={`status-badge status-${o.status}`}>
+                        {o.status === 'concluido' ? '✓ Concluído' : '● Pendente'}
+                      </span>
+                    </span>
+                    <span>
+                      <button
+                        className={`btn-status-toggle ${o.status === 'concluido' ? 'btn-toggle-reabrir' : 'btn-toggle-concluir'}`}
+                        onClick={() => toggleStatus(o)}
+                      >
+                        {o.status === 'concluido' ? 'Reabrir' : 'Concluir'}
+                      </button>
+                    </span>
                     <span className="hist-total">{fmt(o.total)}</span>
                   </div>
                 ))}

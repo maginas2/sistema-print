@@ -598,6 +598,148 @@ input.has-eye { padding-right: 42px !important; padding-left: 14px; }
   border-color: rgba(220,38,38,.28);
 }
 
+/* ─── Orçamentos page ────────────────────── */
+.orc-toolbar {
+  display: flex; flex-direction: column; gap: 16px;
+  padding: 20px 28px 0;
+  border-bottom: 1.5px solid var(--gray-200);
+}
+
+.orc-search-wrap {
+  position: relative; display: flex; align-items: center;
+}
+.orc-search-icon {
+  width: 18px; height: 18px; fill: var(--gray-400);
+  position: absolute; left: 14px; pointer-events: none; flex-shrink: 0;
+}
+.orc-search-input {
+  width: 100%; height: 46px; padding: 0 40px 0 44px;
+  border: 2px solid var(--gray-200); border-radius: var(--radius);
+  font-family: inherit; font-size: 14px; font-weight: 500;
+  color: var(--gray-800); background: var(--gray-50);
+  outline: none; transition: border-color .2s, box-shadow .2s;
+}
+.orc-search-input:focus { border-color: var(--blue); background: #fff; box-shadow: 0 0 0 3px rgba(26,86,219,.12); }
+.orc-search-clear { position: absolute; right: 12px; background: none; border: none; cursor: pointer; color: var(--gray-400); font-size: 14px; padding: 0 4px; }
+.orc-search-clear:hover { color: var(--gray-600); }
+
+.orc-tabs { display: flex; gap: 0; }
+.orc-tab {
+  height: 42px; padding: 0 18px; display: flex; align-items: center; gap: 7px;
+  border: none; border-bottom: 2.5px solid transparent; margin-bottom: -1.5px;
+  background: transparent; color: var(--gray-400);
+  font-family: inherit; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: color .18s, border-color .18s; white-space: nowrap;
+}
+.orc-tab:hover { color: var(--gray-700); }
+.orc-tab.active { color: var(--blue); border-bottom-color: var(--blue); }
+.orc-tab-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.orc-tab-count {
+  background: var(--gray-100); color: var(--gray-500);
+  font-size: 11px; font-weight: 700; border-radius: 20px; padding: 1px 7px;
+  transition: background .18s, color .18s;
+}
+.orc-tab.active .orc-tab-count { background: var(--blue-light); color: var(--blue); }
+
+/* Table */
+.orc-table-wrap { border-top: 1.5px solid var(--gray-200); }
+
+.orc-table-wrap .orc-thead,
+.orc-table-wrap .orc-row {
+  display: grid;
+  grid-template-columns: 78px 1fr 92px 112px 96px 90px;
+  align-items: center;
+}
+.orc-table-wrap.orc-admin .orc-thead,
+.orc-table-wrap.orc-admin .orc-row {
+  grid-template-columns: 78px 1fr 130px 92px 112px 96px 90px;
+}
+
+.orc-thead {
+  padding: 10px 24px;
+  background: var(--gray-50);
+  border-bottom: 1.5px solid var(--gray-200);
+}
+.orc-thead span { font-size: 11px; font-weight: 700; color: var(--gray-400); text-transform: uppercase; letter-spacing: .6px; }
+
+.orc-row {
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--gray-100);
+  transition: background .12s;
+}
+.orc-row:last-child { border-bottom: none; }
+.orc-row:hover { background: var(--gray-50); }
+
+.orc-num       { font-size: 13px; font-weight: 800; color: var(--blue); }
+.orc-cliente   { font-size: 14px; font-weight: 600; color: var(--gray-800); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 12px; }
+.orc-feito-por { font-size: 13px; font-weight: 500; color: var(--gray-600); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 8px; }
+.orc-data      { font-size: 13px; color: var(--gray-500); }
+.orc-total     { font-size: 14px; font-weight: 700; color: var(--blue); text-align: right; }
+.orc-align-right  { text-align: right; }
+.orc-align-center { text-align: center; }
+
+.orc-footer {
+  padding: 11px 24px;
+  border-top: 1px solid var(--gray-100);
+  background: var(--gray-50);
+  font-size: 12px; color: var(--gray-400); font-weight: 500;
+  border-radius: 0 0 20px 20px;
+}
+.orc-footer strong { color: var(--gray-700); }
+
+/* ─── Relatórios ─────────────────────────── */
+input[type="date"] { width: 100%; height: 48px; border: 2px solid var(--gray-200); border-radius: var(--radius); font-family: inherit; font-size: 15px; font-weight: 600; color: var(--gray-800); background: var(--gray-50); outline: none; padding: 0 14px; transition: border-color .2s, box-shadow .2s, background .2s; }
+input[type="date"]:focus { border-color: var(--blue); background: #fff; box-shadow: 0 0 0 3px rgba(26,86,219,.12); }
+
+.period-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.period-tab {
+  height: 38px; padding: 0 18px;
+  border: 1.5px solid var(--gray-200); border-radius: 8px;
+  background: #fff; color: var(--gray-600);
+  font-family: inherit; font-size: 13px; font-weight: 600;
+  cursor: pointer; white-space: nowrap;
+  transition: border-color .2s, background .2s, color .2s, box-shadow .2s;
+}
+.period-tab:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-light); }
+.period-tab.active { background: var(--blue); border-color: var(--blue); color: #fff; box-shadow: 0 2px 10px rgba(26,86,219,.3); }
+
+/* ── Status badge ─────────────────────────── */
+.status-badge {
+  display: inline-flex; align-items: center;
+  font-size: 11px; font-weight: 700;
+  border-radius: 20px; padding: 4px 10px;
+  white-space: nowrap; letter-spacing: .2px;
+}
+.status-pendente  { background: var(--yellow-bg);   color: var(--yellow-dark); }
+.status-concluido { background: var(--green-light);  color: var(--green);       }
+
+/* ── Botões de toggle de status ──────────── */
+.btn-status-toggle {
+  height: 28px; padding: 0 12px;
+  border-radius: 6px; border: none;
+  font-family: inherit; font-size: 11px; font-weight: 700;
+  cursor: pointer; white-space: nowrap;
+  transition: background .2s, transform .1s;
+}
+.btn-status-toggle:active { transform: scale(.95); }
+.btn-toggle-concluir { background: var(--green-light); color: var(--green); }
+.btn-toggle-concluir:hover { background: #A7F3D0; }
+.btn-toggle-reabrir  { background: var(--gray-100); color: var(--gray-600); border: 1px solid var(--gray-200); }
+.btn-toggle-reabrir:hover  { background: var(--gray-200); }
+
+/* ── Dashboard hist com status ────────────── */
+.hist-status      .hist-header,
+.hist-status      .hist-row     { grid-template-columns: 1fr 72px 90px 112px 100px 90px; }
+.hist-status-admin .hist-header,
+.hist-status-admin .hist-row    { grid-template-columns: 1fr 72px 120px 90px 112px 100px 90px; }
+
+/* ── Relatorio com status ─────────────────── */
+.hist-header.relat-status,
+.hist-row.relat-status           { grid-template-columns: 1fr 72px 90px 112px 100px; }
+.hist-header.relat-status-admin,
+.hist-row.relat-status-admin     { grid-template-columns: 1fr 72px 130px 90px 112px 100px; }
+
 /* ─── Responsive ─────────────────────────── */
 @media (max-width: 768px) {
   .sidebar { width: 100%; min-height: auto; position: relative; flex-direction: row; align-items: center; padding: 0 12px; gap: 0; }
