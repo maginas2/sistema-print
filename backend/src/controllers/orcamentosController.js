@@ -1,5 +1,8 @@
 import { supabase } from '../lib/supabase.js';
 
+const PERIODOS_VALIDOS = ['diario', 'semanal', 'mensal', 'anual', 'personalizado', 'todos'];
+const STATUS_VALIDOS   = ['pendente', 'concluido'];
+
 export async function listar(req, res) {
   const { usuario_id, perfil } = req.query;
 
@@ -32,9 +35,26 @@ export async function proximoNumero(req, res) {
 export async function salvar(req, res) {
   const { usuario_id, cliente, numero, total } = req.body;
 
+  if (!cliente || typeof cliente !== 'string' || cliente.trim().length > 200) {
+    return res.status(400).json({ erro: 'Cliente inválido.' });
+  }
+  if (!numero || typeof numero !== 'string' || numero.length > 20) {
+    return res.status(400).json({ erro: 'Número de orçamento inválido.' });
+  }
+  const totalNum = parseFloat(total);
+  if (isNaN(totalNum) || totalNum < 0) {
+    return res.status(400).json({ erro: 'Total inválido.' });
+  }
+
   const { data, error } = await supabase
     .from('orcamentos')
-    .insert([{ usuario_id: usuario_id || null, cliente, numero, total, status: 'pendente' }])
+    .insert([{
+      usuario_id: usuario_id || null,
+      cliente:    cliente.trim(),
+      numero,
+      total:      totalNum,
+      status:     'pendente',
+    }])
     .select('id, numero, status')
     .single();
 
@@ -46,8 +66,11 @@ export async function atualizarStatus(req, res) {
   const { id } = req.params;
   const { status } = req.body;
 
-  if (!['pendente', 'concluido'].includes(status)) {
+  if (!STATUS_VALIDOS.includes(status)) {
     return res.status(400).json({ erro: 'Status inválido.' });
+  }
+  if (!id || typeof id !== 'string' || id.length > 50) {
+    return res.status(400).json({ erro: 'ID inválido.' });
   }
 
   const { data, error } = await supabase

@@ -1,4 +1,5 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { apiFetch } from './lib/api.js';
 import { useProdutos } from './hooks/useProdutos';
 import { useHistorico } from './hooks/useHistorico';
 import Calculadora from './components/Calculadora';
@@ -43,16 +44,25 @@ export default function App() {
   const { historico, salvarOrcamento, limparHistorico, carregando, recarregar } = useHistorico(usuario);
   const produtoParaUsar = useRef(null);
 
-  function handleLogin(u) {
+  useEffect(() => {
+    function onSessionExpired() {
+      setUsuario(null);
+      setAba('dashboard');
+    }
+    window.addEventListener('session-expired', onSessionExpired);
+    return () => window.removeEventListener('session-expired', onSessionExpired);
+  }, []);
+
+  function handleLogin(u, token) {
     localStorage.setItem('print_usuario', JSON.stringify(u));
+    localStorage.setItem('print_token', token);
     setUsuario(u);
   }
 
   async function atualizarStatus(id, novoStatus) {
     try {
-      await fetch(`http://localhost:3001/api/orcamentos/${id}/status`, {
+      await apiFetch(`/api/orcamentos/${id}/status`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: novoStatus }),
       });
       recarregar();
@@ -61,6 +71,7 @@ export default function App() {
 
   function handleLogout() {
     localStorage.removeItem('print_usuario');
+    localStorage.removeItem('print_token');
     setUsuario(null);
     setAba('dashboard');
   }

@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import usuariosRoutes from './routes/usuarios.js';
 import authRoutes from './routes/auth.js';
 import orcamentosRoutes from './routes/orcamentos.js';
@@ -9,8 +10,9 @@ import relatoriosRoutes from './routes/relatorios.js';
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+app.use(helmet());
 app.use(cors({ origin: 'http://localhost:5175' }));
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 

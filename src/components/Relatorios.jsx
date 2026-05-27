@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { fmt } from '../utils/fmt';
 import { gerarRelatoriosPDF } from '../utils/pdf';
+import { apiFetch } from '../lib/api.js';
 
 const PERIODOS = [
   { value: 'diario',        label: 'Hoje'         },
@@ -27,20 +28,21 @@ const ICONS = {
 export default function Relatorios({ usuario }) {
   const isAdmin = usuario.perfil === 'admin';
 
-  const [periodo,          setPeriodo]          = useState('mensal');
-  const [dataInicio,       setDataInicio]        = useState('');
-  const [dataFim,          setDataFim]           = useState('');
-  const [filtroUsuarioId,  setFiltroUsuarioId]   = useState('todos');
-  const [filtroStatus,     setFiltroStatus]      = useState('todos');
-  const [listaUsuarios,    setListaUsuarios]     = useState([]);
-  const [dados,            setDados]             = useState(null);
-  const [carregando,       setCarregando]        = useState(false);
-  const [gerandoPDF,       setGerandoPDF]        = useState(false);
-  const [erro,             setErro]             = useState('');
+  const [periodo,         setPeriodo]        = useState('mensal');
+  const [dataInicio,      setDataInicio]      = useState('');
+  const [dataFim,         setDataFim]         = useState('');
+  const [filtroUsuarioId, setFiltroUsuarioId] = useState('todos');
+  const [filtroStatus,    setFiltroStatus]    = useState('todos');
+  const [listaUsuarios,   setListaUsuarios]   = useState([]);
+  const [dados,           setDados]           = useState(null);
+  const [carregando,      setCarregando]      = useState(false);
+  const [erro,            setErro]            = useState('');
+
+  const baixarAoGerar = useRef(false);
 
   useEffect(() => {
     if (!isAdmin) return;
-    fetch('http://localhost:3001/api/usuarios')
+    apiFetch('/api/usuarios')
       .then(r => r.json())
       .then(setListaUsuarios)
       .catch(() => {});
@@ -69,38 +71,42 @@ export default function Relatorios({ usuario }) {
       if (filtroStatus !== 'todos') {
         params.append('filtro_status', filtroStatus);
       }
-      const res = await fetch(`http://localhost:3001/api/relatorios?${params}`);
+      const res = await apiFetch(`/api/relatorios?${params}`);
       if (!res.ok) throw new Error();
-      setDados(await res.json());
-    } catch {
-      setErro('Não foi possível gerar o relatório. Verifique se o backend está rodando.');
+      const dadosResp = await res.json();
+      setDados(dadosResp);
+
+      if (baixarAoGerar.current && dadosResp.registros?.length > 0) {
+        const labelPeriodo = PERIODOS.find(p => p.value === periodo)?.label ?? '';
+        await gerarRelatoriosPDF({
+          registros:    dadosResp.registros,
+          stats:        dadosResp.stats,
+          labelPeriodo,
+          filtroStatus,
+          isAdmin,
+          geradoPor:    usuario.nome,
+        });
+      }
+    } catch (e) {
+      if (e?.message !== 'session-expired') {
+        setErro('Não foi possível gerar o relatório. Verifique se o backend está rodando.');
+      }
     } finally {
+      baixarAoGerar.current = false;
       setCarregando(false);
     }
   }, [periodo, dataInicio, dataFim, filtroUsuarioId, filtroStatus, usuario, isAdmin]);
 
   useEffect(() => { gerar(); }, [gerar]);
 
+  function handleGerarClick() {
+    baixarAoGerar.current = true;
+    gerar();
+  }
+
   const stats     = dados?.stats;
   const registros = dados?.registros ?? [];
-
   const labelPeriodo = PERIODOS.find(p => p.value === periodo)?.label ?? '';
-
-  async function baixarPDF() {
-    setGerandoPDF(true);
-    try {
-      await gerarRelatoriosPDF({
-        registros,
-        stats,
-        labelPeriodo,
-        filtroStatus,
-        isAdmin,
-        geradoPor: usuario.nome,
-      });
-    } finally {
-      setGerandoPDF(false);
-    }
-  }
 
   return (
     <>
@@ -183,7 +189,7 @@ export default function Relatorios({ usuario }) {
 
           <button
             className="btn-primary"
-            onClick={gerar}
+            onClick={handleGerarClick}
             disabled={carregando}
             style={{ maxWidth: 240 }}
           >
@@ -236,7 +242,7 @@ export default function Relatorios({ usuario }) {
         <div className="card" style={{ animation: 'slide-in .3s ease' }}>
           <div className="card-header">
             <div className="card-header-icon">{ICONS.hist}</div>
-            <div style={{ flex: 1 }}>
+            <div>
               <h2>Resultados</h2>
               <p>
                 {registros.length === 0
@@ -244,19 +250,6 @@ export default function Relatorios({ usuario }) {
                   : `${registros.length} orçamento${registros.length > 1 ? 's' : ''} encontrado${registros.length > 1 ? 's' : ''}`}
               </p>
             </div>
-            {registros.length > 0 && (
-              <button
-                className="btn-pdf"
-                onClick={baixarPDF}
-                disabled={gerandoPDF}
-                style={{ flexShrink: 0 }}
-              >
-                <svg viewBox="0 0 24 24" style={{ width: 14, height: 14, fill: 'currentColor', marginRight: 5, verticalAlign: 'middle', opacity: gerandoPDF ? 0 : 1, animation: gerandoPDF ? 'spin .8s linear infinite' : 'none' }}>
-                  <path d="M19 9h-4V3H9v6H5l7 7 7-7zm-8 2V5h2v6h1.17L12 13.17 9.83 11H11zm-6 7h14v2H5v-2z"/>
-                </svg>
-                {gerandoPDF ? 'Gerando…' : 'Baixar PDF'}
-              </button>
-            )}
           </div>
 
           <div className="card-body" style={{ padding: registros.length > 0 ? 0 : undefined }}>

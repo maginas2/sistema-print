@@ -94,7 +94,7 @@ export async function gerarRelatoriosPDF({ registros, stats, labelPeriodo, filtr
   }
 
   const cols = isAdmin
-    ? [['CLIENTE', C.cliente], ['Nº', C.num], ['USUÁRIO', C.usuario], ['DATA', C.data], ['STATUS', C.status], ['TOTAL', C.total]]
+    ? [['CLIENTE', C.cliente], ['Nº', C.num], ['FEITO POR', C.usuario], ['DATA', C.data], ['STATUS', C.status], ['TOTAL', C.total]]
     : [['CLIENTE', C.cliente], ['Nº', C.num], ['DATA', C.data], ['STATUS', C.status], ['TOTAL', C.total]];
 
   // Cabeçalho

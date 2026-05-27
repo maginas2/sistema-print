@@ -1,4 +1,5 @@
 import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 import { supabase } from '../lib/supabase.js';
 
 export async function login(req, res) {
@@ -6,6 +7,12 @@ export async function login(req, res) {
 
   if (!nome || !senha) {
     return res.status(400).json({ erro: 'Nome e senha são obrigatórios.' });
+  }
+  if (typeof nome !== 'string' || nome.trim().length > 100) {
+    return res.status(400).json({ erro: 'Nome inválido.' });
+  }
+  if (typeof senha !== 'string' || senha.length > 128) {
+    return res.status(400).json({ erro: 'Senha inválida.' });
   }
 
   const { data: usuario, error } = await supabase
@@ -24,5 +31,12 @@ export async function login(req, res) {
   }
 
   const { senha: _, ...usuarioSemSenha } = usuario;
-  return res.json({ mensagem: 'Login realizado com sucesso.', usuario: usuarioSemSenha });
+
+  const token = jwt.sign(
+    { id: usuarioSemSenha.id, nome: usuarioSemSenha.nome, perfil: usuarioSemSenha.perfil },
+    process.env.JWT_SECRET,
+    { expiresIn: '8h' }
+  );
+
+  return res.json({ mensagem: 'Login realizado com sucesso.', usuario: usuarioSemSenha, token });
 }

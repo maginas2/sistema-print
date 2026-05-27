@@ -41,7 +41,7 @@ export default function Login({ onLogin }) {
         return;
       }
 
-      onLogin(dados.usuario);
+      onLogin(dados.usuario, dados.token);
     } catch {
       setErro('Não foi possível conectar ao servidor. Verifique se o backend está rodando.');
     } finally {

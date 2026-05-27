@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { apiFetch } from '../lib/api.js';
 
 const STORAGE_KEY = 'print_historico';
 
@@ -31,14 +32,14 @@ export function useHistorico(usuario) {
     setCarregando(true);
     try {
       const params = new URLSearchParams({ usuario_id: usuario.id, perfil: usuario.perfil });
-      const res = await fetch(`http://localhost:3001/api/orcamentos?${params}`);
+      const res = await apiFetch(`/api/orcamentos?${params}`);
       if (!res.ok) throw new Error();
       const dados = await res.json();
       const formatado = formatarDoBackend(dados);
       setHistorico(formatado);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(formatado));
     } catch {
-      // backend indisponível — mantém o que já está carregado
+      // backend indisponível ou sessão expirada — mantém o que já está carregado
     } finally {
       setCarregando(false);
     }
@@ -49,10 +50,8 @@ export function useHistorico(usuario) {
   }, [recarregar]);
 
   function salvarOrcamento({ cliente, numero, data, itens, total }) {
-    // atualização otimista imediata
     const novo = { id: Date.now(), cliente, numero, data, itensCont: itens.length, total };
     setHistorico(prev => [novo, ...prev].slice(0, 50));
-    // depois sincroniza com o banco
     setTimeout(recarregar, 600);
   }
 

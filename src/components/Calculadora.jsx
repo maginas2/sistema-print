@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { fmt } from '../utils/fmt';
 import { gerarPDF } from '../utils/pdf';
+import { apiFetch } from '../lib/api.js';
 
 async function buscarProximoNumero() {
   try {
-    const res = await fetch('http://localhost:3001/api/orcamentos/proximo-numero');
+    const res = await apiFetch('/api/orcamentos/proximo-numero');
     const dados = await res.json();
     return dados.numero ?? '';
   } catch {
@@ -107,9 +108,8 @@ export default function Calculadora({ produtos, produtoInicial, onSalvarHistoric
     onSalvarHistorico?.(dadosOrcamento);
 
     try {
-      await fetch('http://localhost:3001/api/orcamentos', {
+      await apiFetch('/api/orcamentos', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           usuario_id: usuarioId,
           cliente: dadosOrcamento.cliente,
