@@ -2,18 +2,18 @@ import { jsPDF } from 'jspdf';
 import { fmt } from './fmt';
 import imgTopoUrl   from '../assets/parte de cima.jpg.jpeg';
 import imgRodapeUrl from '../assets/parte de baixo.jpg.jpeg';
+import logoUrl      from '../assets/print logo.png';
 
-export async function gerarRelatoriosPDF({ registros, stats, labelPeriodo, filtroStatus, isAdmin, geradoPor }) {
-  const [imgTopo, imgRodape] = await Promise.all([toBase64(imgTopoUrl), toBase64(imgRodapeUrl)]);
+export async function gerarRelatoriosPDF({ registros, stats, labelPeriodo, filtroStatus, isAdmin }) {
+  const imgLogo = await toBase64(logoUrl);
 
   const doc  = new jsPDF({ unit: 'mm', format: 'a4' });
   const W    = 210;
   const ML   = 14;
   const CW   = W - ML * 2;
 
-  const TOPO_H   = W * (436 / 2380);
-  const RODAPE_H = W * (300 / 2378);
-  const LIMITE_Y = 297 - RODAPE_H - 6;
+  const HEADER_H = 32;
+  const LIMITE_Y = 285;
 
   const rgb   = h => [parseInt(h.slice(1,3),16), parseInt(h.slice(3,5),16), parseInt(h.slice(5,7),16)];
   const fill  = c => doc.setFillColor(...rgb(c));
@@ -23,10 +23,18 @@ export async function gerarRelatoriosPDF({ registros, stats, labelPeriodo, filtr
   const statusLabel = filtroStatus === 'concluido' ? 'Concluídos' : filtroStatus === 'pendente' ? 'Pendentes' : 'Todos';
   const hoje        = new Date().toLocaleDateString('pt-BR');
 
-  // ── Topo ──────────────────────────────────────
-  doc.addImage(imgTopo, 'JPEG', 0, 0, W, TOPO_H);
+  const drawHeader = () => {
+    fill('#111111');
+    doc.rect(0, 0, W, HEADER_H, 'F');
+    const LOGO_H_MM = 20;
+    const LOGO_W_MM = 62;
+    doc.addImage(imgLogo, 'PNG', (W - LOGO_W_MM) / 2, (HEADER_H - LOGO_H_MM) / 2, LOGO_W_MM, LOGO_H_MM);
+  };
 
-  let y = TOPO_H + 4;
+  // ── Topo ──────────────────────────────────────
+  drawHeader();
+
+  let y = HEADER_H + 4;
 
   // Título
   doc.setFont('helvetica', 'bold'); doc.setFontSize(15); color('#000000');
@@ -39,9 +47,8 @@ export async function gerarRelatoriosPDF({ registros, stats, labelPeriodo, filtr
   doc.text(`Período: ${labelPeriodo}`, W - ML, y + 2,  { align: 'right' });
   doc.text(`Status: ${statusLabel}`,   W - ML, y + 7,  { align: 'right' });
   doc.text(`Gerado em: ${hoje}`,        W - ML, y + 12, { align: 'right' });
-  if (geradoPor) doc.text(`Por: ${geradoPor}`, W - ML, y + 17, { align: 'right' });
 
-  y += 22;
+  y += 18;
 
   // ── Stats ────────────────────────────────────
   const STAT_W = CW / 4;
@@ -110,9 +117,9 @@ export async function gerarRelatoriosPDF({ registros, stats, labelPeriodo, filtr
   registros.forEach((o, idx) => {
     if (y + ROW_H > LIMITE_Y) {
       doc.addPage();
-      doc.addImage(imgTopo, 'JPEG', 0, 0, W, TOPO_H);
-      y = TOPO_H + 8;
-      // re-desenha cabeçalho
+      drawHeader();
+      y = HEADER_H + 8;
+      // re-desenha cabeçalho da tabela
       fill('#1E293B'); draw('#1E293B');
       doc.rect(ML, y, CW, HDR_H, 'FD');
       doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); color('#FFFFFF');
@@ -161,9 +168,6 @@ export async function gerarRelatoriosPDF({ registros, stats, labelPeriodo, filtr
   y += 6;
   doc.setFont('helvetica', 'bold'); doc.setFontSize(10); color('#1E293B');
   doc.text(`Total geral: ${fmt(stats.valor_total)}`, W - ML, y, { align: 'right' });
-
-  // ── Rodapé ───────────────────────────────────
-  doc.addImage(imgRodape, 'JPEG', 0, 297 - RODAPE_H, W, RODAPE_H);
 
   doc.save(`relatorio-orcamentos-${hoje.replace(/\//g, '-')}.pdf`);
 }
