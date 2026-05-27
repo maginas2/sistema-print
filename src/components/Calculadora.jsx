@@ -2,7 +2,17 @@ import { useState, useEffect } from 'react';
 import { fmt } from '../utils/fmt';
 import { gerarPDF } from '../utils/pdf';
 
-export default function Calculadora({ produtos, produtoInicial, onSalvarHistorico }) {
+async function buscarProximoNumero() {
+  try {
+    const res = await fetch('http://localhost:3001/api/orcamentos/proximo-numero');
+    const dados = await res.json();
+    return dados.numero ?? '';
+  } catch {
+    return '';
+  }
+}
+
+export default function Calculadora({ produtos, produtoInicial, onSalvarHistorico, usuarioId }) {
   const [cliente, setCliente] = useState('');
   const [numero, setNumero]   = useState('');
   const [catalogoId, setCatalogoId] = useState('');
@@ -13,6 +23,10 @@ export default function Calculadora({ produtos, produtoInicial, onSalvarHistoric
   const [quantidade, setQuantidade] = useState('1');
   const [resultado, setResultado]   = useState(null);
   const [itens, setItens]           = useState([]);
+
+  useEffect(() => {
+    buscarProximoNumero().then(n => { if (n) setNumero(n); });
+  }, []);
 
   useEffect(() => {
     if (produtoInicial?.current) {
@@ -70,11 +84,13 @@ export default function Calculadora({ produtos, produtoInicial, onSalvarHistoric
     limparForm();
   }
 
-  function novoOrcamento() {
+  async function novoOrcamento() {
     setResultado(null);
     setItens([]);
-    setCliente(''); setNumero('');
+    setCliente('');
     limparForm();
+    const n = await buscarProximoNumero();
+    setNumero(n);
   }
 
   async function handleGerarPDF() {
@@ -89,6 +105,19 @@ export default function Calculadora({ produtos, produtoInicial, onSalvarHistoric
     };
     await gerarPDF(dadosOrcamento);
     onSalvarHistorico?.(dadosOrcamento);
+
+    try {
+      await fetch('http://localhost:3001/api/orcamentos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          usuario_id: usuarioId,
+          cliente: dadosOrcamento.cliente,
+          numero: dadosOrcamento.numero,
+          total: dadosOrcamento.total,
+        }),
+      });
+    } catch { /* não bloqueia o fluxo */ }
   }
 
   const totalGeral = itens.reduce((s, i) => s + i.total, 0);
@@ -117,8 +146,8 @@ export default function Calculadora({ produtos, produtoInicial, onSalvarHistoric
               <input type="text" placeholder="Ex: João Silva" value={cliente} onChange={e => setCliente(e.target.value)} onKeyDown={handleKeyDown} />
             </div>
             <div className="field">
-              <label>Nº do orçamento</label>
-              <input type="text" placeholder="Ex: 0042" value={numero} onChange={e => setNumero(e.target.value)} onKeyDown={handleKeyDown} />
+              <label>Nº do orçamento <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--green)', background: 'var(--green-light)', borderRadius: 4, padding: '1px 6px', marginLeft: 4 }}>auto</span></label>
+              <input type="text" placeholder="Gerando…" value={numero} readOnly style={{ background: 'var(--gray-50)', color: 'var(--gray-600)', cursor: 'default' }} />
             </div>
           </div>
 

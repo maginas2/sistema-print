@@ -1,6 +1,6 @@
 import { fmt } from '../utils/fmt';
 
-export default function Dashboard({ historico, produtos, onIrParaCalculadora, onIrParaProdutos, onLimparHistorico }) {
+export default function Dashboard({ historico, produtos, onIrParaCalculadora, onIrParaProdutos, onLimparHistorico, onRecarregar, carregando }) {
   const totalOrcamentos = historico.length;
   const valorTotal = historico.reduce((s, o) => s + o.total, 0);
   const ticketMedio = totalOrcamentos > 0 ? valorTotal / totalOrcamentos : 0;
@@ -65,6 +65,16 @@ export default function Dashboard({ historico, produtos, onIrParaCalculadora, on
               <h2>Histórico de Orçamentos</h2>
               <p>{ultimos.length > 0 ? `Últimos ${ultimos.length} PDFs gerados` : 'Nenhum PDF gerado ainda'}</p>
             </div>
+            <button
+              className="btn-limpar-hist"
+              onClick={onRecarregar}
+              disabled={carregando}
+              title="Atualizar do banco"
+              style={{ opacity: carregando ? .5 : 1 }}
+            >
+              <svg viewBox="0 0 24 24" style={{ width: 13, height: 13, fill: 'currentColor', marginRight: 5, verticalAlign: 'middle', animation: carregando ? 'spin .8s linear infinite' : 'none' }}><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+              {carregando ? 'Atualizando…' : 'Atualizar'}
+            </button>
             {historico.length > 0 && (
               <button className="btn-limpar-hist" onClick={handleLimpar}>Limpar tudo</button>
             )}
