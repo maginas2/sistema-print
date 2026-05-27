@@ -222,6 +222,10 @@ select:focus { border-color: var(--blue); background-color: #fff; box-shadow: 0 
 .btn-pdf svg { width: 18px; height: 18px; fill: #fff; flex-shrink: 0; }
 .btn-pdf:hover { background: #B91C1C; }
 .btn-pdf:active { transform: scale(.97); }
+.btn-salvar { background: var(--green); color: #fff; height: 42px; border: none; border-radius: 8px; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 7px; padding: 0 18px; transition: background .2s, transform .1s; }
+.btn-salvar svg { width: 18px; height: 18px; fill: #fff; flex-shrink: 0; }
+.btn-salvar:hover { background: #15803d; }
+.btn-salvar:active { transform: scale(.97); }
 .btn-reset { background: transparent; color: var(--gray-600); height: 42px; border: 1.5px solid var(--gray-200); border-radius: 8px; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; padding: 0 16px; transition: background .2s; }
 .btn-reset:hover { background: var(--gray-100); }
 
@@ -502,7 +506,7 @@ input.has-eye { padding-right: 42px !important; padding-left: 14px; }
 }
 
 .login-logo-top {
-  width: 90px;
+  width: 160px;
   height: auto;
   border-radius: 14px;
   margin-bottom: 28px;
@@ -756,5 +760,5 @@ input[type="date"]:focus { border-color: var(--blue); background: #fff; box-shad
 
 @media (max-width: 480px) {
   .login-layout { padding: 24px 16px; }
-  .login-logo-top { width: 72px; margin-bottom: 20px; }
+  .login-logo-top { width: 120px; margin-bottom: 20px; }
 }

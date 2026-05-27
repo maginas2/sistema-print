@@ -94,19 +94,7 @@ export default function Calculadora({ produtos, produtoInicial, onSalvarHistoric
     setNumero(n);
   }
 
-  async function handleGerarPDF() {
-    const todosItens = [...itens, ...(resultado ? [resultado] : [])];
-    if (todosItens.length === 0) return;
-    const dadosOrcamento = {
-      cliente: cliente.trim() || 'Não informado',
-      numero: numero.trim() || '—',
-      data: new Date().toLocaleDateString('pt-BR'),
-      itens: todosItens,
-      total: todosItens.reduce((s, i) => s + i.total, 0),
-    };
-    await gerarPDF(dadosOrcamento);
-    onSalvarHistorico?.(dadosOrcamento);
-
+  async function salvarOrcamento(dadosOrcamento) {
     try {
       await apiFetch('/api/orcamentos', {
         method: 'POST',
@@ -118,6 +106,37 @@ export default function Calculadora({ produtos, produtoInicial, onSalvarHistoric
         }),
       });
     } catch { /* não bloqueia o fluxo */ }
+    onSalvarHistorico?.(dadosOrcamento);
+    const n = await buscarProximoNumero();
+    setNumero(n);
+  }
+
+  async function handleGerarPDF() {
+    const todosItens = [...itens, ...(resultado ? [resultado] : [])];
+    if (todosItens.length === 0) return;
+    const dadosOrcamento = {
+      cliente: cliente.trim() || 'Não informado',
+      numero: numero.trim() || '—',
+      data: new Date().toLocaleDateString('pt-BR'),
+      itens: todosItens,
+      total: todosItens.reduce((s, i) => s + i.total, 0),
+    };
+    await gerarPDF(dadosOrcamento);
+    await salvarOrcamento(dadosOrcamento);
+  }
+
+  async function handleSalvar() {
+    const todosItens = [...itens, ...(resultado ? [resultado] : [])];
+    if (todosItens.length === 0) return;
+    const dadosOrcamento = {
+      cliente: cliente.trim() || 'Não informado',
+      numero: numero.trim() || '—',
+      data: new Date().toLocaleDateString('pt-BR'),
+      itens: todosItens,
+      total: todosItens.reduce((s, i) => s + i.total, 0),
+    };
+    await salvarOrcamento(dadosOrcamento);
+    alert('Orçamento salvo no sistema!');
   }
 
   const totalGeral = itens.reduce((s, i) => s + i.total, 0);
@@ -291,6 +310,10 @@ export default function Calculadora({ produtos, produtoInicial, onSalvarHistoric
               <button className="btn-pdf" onClick={handleGerarPDF}>
                 <svg viewBox="0 0 24 24"><path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5V11H19v2h-1.5V7h3v1.5zM9 9.5h1v-1H9v1zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm10 5.5h1v-3h-1v3z"/></svg>
                 Gerar PDF do Orçamento
+              </button>
+              <button className="btn-salvar" onClick={handleSalvar}>
+                <svg viewBox="0 0 24 24"><path d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7l-4-4zm-5 16a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm3-10H5V5h10v4z"/></svg>
+                Salvar no Sistema
               </button>
               <button className="btn-reset" onClick={novoOrcamento}>Novo orçamento</button>
             </div>
