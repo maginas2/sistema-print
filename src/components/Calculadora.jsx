@@ -50,13 +50,14 @@ export default function Calculadora({ produtos, produtoInicial, onSalvarHistoric
   }
 
   function calcular() {
-    if (!produto.trim())          { alert('Informe o nome do produto ou material.'); return; }
-    if (parseFloat(preco) <= 0)   { alert('Informe o preço por m² maior que zero.'); return; }
-    if (parseFloat(largura) <= 0 || parseFloat(altura) <= 0) { alert('Informe largura e altura maiores que zero.'); return; }
+    const toNum = v => parseFloat(String(v).replace(',', '.'));
+    if (!produto.trim())        { alert('Informe o nome do produto ou material.'); return; }
+    if (toNum(preco) <= 0)      { alert('Informe o preço por m² maior que zero.'); return; }
+    if (toNum(largura) <= 0 || toNum(altura) <= 0) { alert('Informe largura e altura maiores que zero.'); return; }
 
-    const p = parseFloat(preco);
-    const l = parseFloat(largura);
-    const h = parseFloat(altura);
+    const p = toNum(preco);
+    const l = toNum(largura);
+    const h = toNum(altura);
     const q = parseInt(quantidade) || 1;
     const area      = l * h;
     const valorUnit = area * p;
