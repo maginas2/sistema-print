@@ -21,6 +21,8 @@ const ICONS = {
   sair:  <svg viewBox="0 0 24 24"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>,
   relat: <svg viewBox="0 0 24 24"><path d="M9 17H7v-3h2v3zm4 0h-2v-7h2v7zm4 0h-2v-5h2v5zm2 2H5V5h14v14zm0-16H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/></svg>,
   orc:   <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11zM8 15h8v2H8zm0-4h8v2H8zm0-4h5v2H8z"/></svg>,
+  moon:  <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 0 1-4.4 2.26 5.403 5.403 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1z"/></svg>,
+  sun:   <svg viewBox="0 0 24 24"><path d="M12 7a5 5 0 1 0 0 10A5 5 0 0 0 12 7zm0-5a1 1 0 0 1 1 1v2a1 1 0 0 1-2 0V3a1 1 0 0 1 1-1zm0 16a1 1 0 0 1 1 1v2a1 1 0 0 1-2 0v-2a1 1 0 0 1 1-1zm9-9a1 1 0 0 1 0 2h-2a1 1 0 0 1 0-2h2zM5 12a1 1 0 0 1-1 1H2a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1zm11.95-6.364a1 1 0 0 1 0 1.414l-1.414 1.414a1 1 0 1 1-1.414-1.414l1.414-1.414a1 1 0 0 1 1.414 0zM8.464 15.536a1 1 0 0 1 0 1.414L7.05 18.364a1 1 0 1 1-1.414-1.414l1.414-1.414a1 1 0 0 1 1.414 0zm9.9 2.828a1 1 0 0 1-1.414 0l-1.414-1.414a1 1 0 0 1 1.414-1.414l1.414 1.414a1 1 0 0 1 0 1.414zM8.464 8.464a1 1 0 0 1-1.414 0L5.636 7.05A1 1 0 0 1 7.05 5.636l1.414 1.414a1 1 0 0 1 0 1.414z"/></svg>,
 };
 
 const PAGE_META = {
@@ -37,9 +39,23 @@ function lerSessao() {
   catch { return null; }
 }
 
+function lerTema() {
+  return localStorage.getItem('print_tema') ?? 'light';
+}
+
 export default function App() {
   const [usuario, setUsuario] = useState(lerSessao);
   const [aba, setAba] = useState('dashboard');
+  const [tema, setTema] = useState(lerTema);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', tema);
+    localStorage.setItem('print_tema', tema);
+  }, [tema]);
+
+  function toggleTema() {
+    setTema(t => t === 'light' ? 'dark' : 'light');
+  }
   const { produtos, adicionar, atualizar, remover } = useProdutos();
   const { historico, salvarOrcamento, limparHistorico, carregando, recarregar } = useHistorico(usuario);
   const produtoParaUsar = useRef(null);
@@ -146,6 +162,10 @@ export default function App() {
         </nav>
 
         <div className="sidebar-footer">
+          <button className="btn-tema" onClick={toggleTema} title={tema === 'dark' ? 'Modo claro' : 'Modo escuro'}>
+            <span className="nav-icon">{tema === 'dark' ? ICONS.sun : ICONS.moon}</span>
+            <span className="nav-label">{tema === 'dark' ? 'Modo Claro' : 'Modo Escuro'}</span>
+          </button>
           <div className="sidebar-user">
             <div className="sidebar-user-avatar">{iniciais}</div>
             <div className="sidebar-user-info">
