@@ -10,11 +10,12 @@ Sistema web completo para gestão de orçamentos, catálogo de produtos, relató
 2. [Tecnologias](#2-tecnologias)
 3. [Configuração](#3-configuração)
 4. [Como rodar localmente](#4-como-rodar-localmente)
-5. [Segurança](#5-segurança)
-6. [Funcionalidades](#6-funcionalidades)
-7. [Perfis de acesso](#7-perfis-de-acesso)
-8. [Estrutura de arquivos](#8-estrutura-de-arquivos)
-9. [Observações](#9-observações)
+5. [Deploy (Vercel)](#5-deploy-vercel)
+6. [Segurança](#6-segurança)
+7. [Funcionalidades](#7-funcionalidades)
+8. [Perfis de acesso](#8-perfis-de-acesso)
+9. [Estrutura de arquivos](#9-estrutura-de-arquivos)
+10. [Observações](#10-observações)
 
 ---
 
@@ -212,9 +213,42 @@ npm run dev
 
 O backend sobe em: `http://localhost:3001`
 
+> O Vite está configurado com um proxy: qualquer chamada a `/api/...` em desenvolvimento é redirecionada automaticamente para `http://localhost:3001`. Não é necessário alterar nenhuma URL no frontend.
+
 ---
 
-## 5. Segurança
+## 5. Deploy (Vercel)
+
+O projeto é deployado no Vercel com frontend e backend juntos no mesmo domínio.
+
+### Estrutura de deploy
+
+| Arquivo | Função |
+|---|---|
+| `vercel.json` | Redireciona `/api/*` para a serverless function e `/*` para o `index.html` |
+| `api/index.js` | Exporta o app Express como serverless function do Vercel |
+| `backend/src/app.js` | App Express puro (sem `listen`) — reutilizado localmente e no Vercel |
+
+### Variáveis de ambiente no Vercel
+
+Configure no painel do projeto (Settings → Environment Variables):
+
+```
+SUPABASE_URL=https://SEU_PROJETO.supabase.co
+SUPABASE_SERVICE_KEY=sua_service_role_key
+JWT_SECRET=sua_chave_secreta
+```
+
+### Como fazer o deploy
+
+1. Conecte o repositório GitHub ao Vercel
+2. Configure as variáveis de ambiente acima
+3. O Vercel detecta `vercel.json` e usa `npm run build` automaticamente
+4. Todo push para `main` dispara um novo deploy
+
+---
+
+## 6. Segurança
 
 ### Autenticação por JWT
 
@@ -241,11 +275,11 @@ Quando o token expira ou é inválido, o frontend detecta o `401`, limpa o `loca
 Toda comunicação frontend → backend passa por `apiFetch`, que:
 - Injeta o token JWT automaticamente em cada requisição
 - Intercepta respostas `401` e dispara o fluxo de sessão expirada
-- Centraliza a URL base (`http://localhost:3001`) em um único lugar
+- Usa URL relativa (`/api/...`) — funciona tanto em desenvolvimento (proxy Vite) quanto em produção (Vercel same-origin)
 
 ---
 
-## 6. Funcionalidades
+## 7. Funcionalidades
 
 ### Login
 
@@ -260,7 +294,7 @@ Exibe estatísticas gerais, os 6 orçamentos mais recentes e atalhos rápidos pa
 1. O **número do orçamento** é gerado automaticamente
 2. Preencha o **nome do cliente**
 3. Selecione um produto do catálogo ou preencha manualmente (nome + preço/m²)
-4. Informe largura, altura e quantidade
+4. Informe largura, altura e quantidade (aceita vírgula como separador decimal)
 5. Clique em **Calcular** → depois em **Adicionar ao orçamento**
 6. Repita para cada item
 7. Clique em **Salvar no Sistema** para registrar e em **Gerar PDF** para baixar
@@ -294,9 +328,11 @@ Exibe estatísticas gerais, os 6 orçamentos mais recentes e atalhos rápidos pa
 
 ### Usuários *(somente admin)*
 
-- Cadastre novos usuários informando nome, senha e perfil (`admin` ou `operador`)
-- E-mail é opcional
-- Indicador de força de senha no cadastro
+- Visualize todos os usuários cadastrados com nome, e-mail, perfil e data de criação
+- Cadastre novos usuários informando nome, senha e perfil (`admin` ou `operador`) — e-mail é opcional
+- Edite qualquer usuário (nome, e-mail, perfil e senha) via modal
+- Exclua usuários com confirmação inline — o admin não pode excluir a si mesmo
+- Indicador de força de senha no cadastro e na edição
 
 ### Modo Escuro
 
@@ -319,7 +355,7 @@ O sistema possui suporte completo a modo escuro, ativado pelo botão na parte in
 
 ---
 
-## 7. Perfis de acesso
+## 8. Perfis de acesso
 
 | Funcionalidade | Operador | Admin |
 |---|:---:|:---:|
@@ -336,27 +372,31 @@ O sistema possui suporte completo a modo escuro, ativado pelo botão na parte in
 
 ---
 
-## 8. Estrutura de arquivos
+## 9. Estrutura de arquivos
 
 ```
 Sistema Print/
+├── api/
+│   └── index.js                        ← serverless function do Vercel (exporta o app Express)
+│
 ├── backend/
 │   ├── src/
 │   │   ├── controllers/
 │   │   │   ├── authController.js       ← login (bcrypt + geração de JWT)
-│   │   │   ├── usuariosController.js   ← CRUD de usuários
+│   │   │   ├── usuariosController.js   ← CRUD completo de usuários (listar, criar, editar, excluir)
 │   │   │   ├── orcamentosController.js ← listar, salvar, status, próximo número
 │   │   │   └── relatoriosController.js ← filtros por período/usuário/status
 │   │   ├── middleware/
 │   │   │   └── auth.js                 ← verifica JWT em todas as rotas protegidas
 │   │   ├── routes/
 │   │   │   ├── auth.js
-│   │   │   ├── usuarios.js
+│   │   │   ├── usuarios.js             ← GET / POST / PUT /:id / DELETE /:id
 │   │   │   ├── orcamentos.js
 │   │   │   └── relatorios.js
 │   │   ├── lib/
 │   │   │   └── supabase.js             ← cliente Supabase (service role)
-│   │   └── index.js                    ← Express + Helmet + CORS + limite 1mb
+│   │   ├── app.js                      ← Express + Helmet + CORS + limite 1mb (sem listen)
+│   │   └── index.js                    ← ponto de entrada local (chama app.listen)
 │   ├── .env                            ← SUPABASE_URL, SUPABASE_SERVICE_KEY, JWT_SECRET, PORT
 │   └── package.json
 │
@@ -368,16 +408,16 @@ Sistema Print/
 │   ├── components/
 │   │   ├── Login.jsx                   ← tela de autenticação
 │   │   ├── Dashboard.jsx               ← stats + histórico recente + atalhos
-│   │   ├── Calculadora.jsx             ← cálculo por m² e geração de PDF
+│   │   ├── Calculadora.jsx             ← cálculo por m², salvar no sistema e gerar PDF
 │   │   ├── Produtos.jsx                ← catálogo de materiais
 │   │   ├── Orcamentos.jsx              ← listagem, filtros e controle de status
 │   │   ├── Relatorios.jsx              ← relatórios com filtros + PDF integrado
-│   │   └── Usuarios.jsx                ← cadastro de usuários (admin)
+│   │   └── Usuarios.jsx                ← listagem, cadastro, edição e exclusão (admin)
 │   ├── hooks/
 │   │   ├── useProdutos.js              ← produtos via localStorage
 │   │   └── useHistorico.js             ← orçamentos via backend/banco
 │   ├── lib/
-│   │   └── api.js                      ← cliente HTTP centralizado (JWT + logout em 401)
+│   │   └── api.js                      ← cliente HTTP centralizado (URL relativa, JWT, logout em 401)
 │   ├── utils/
 │   │   ├── fmt.js                      ← formatação de valores em R$
 │   │   └── pdf.js                      ← geração de PDFs (orçamento e relatório)
@@ -386,14 +426,15 @@ Sistema Print/
 │   └── main.jsx
 │
 ├── public/
-│   └── favicon.svg                     ← ícone da aba do navegador (p dourado)
-├── vite.config.js                      ← porta 5175
-└── package.json
+│   └── logo.png                        ← favicon (logo da empresa)
+├── vercel.json                         ← rewrites: /api/* → serverless, /* → index.html
+├── vite.config.js                      ← porta 5175 + proxy /api → localhost:3001
+└── package.json                        ← dependências do frontend e do backend (Vercel usa este)
 ```
 
 ---
 
-## 9. Observações
+## 10. Observações
 
 **Portas padrão:**
 - Frontend: `http://localhost:5175`
