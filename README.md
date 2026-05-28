@@ -127,6 +127,37 @@ CREATE TABLE itens_orcamento (
 );
 ```
 
+**Relacionamentos entre tabelas:**
+
+```
+┌──────────────┐        ┌───────────────────┐
+│   usuarios   │        │  itens_orcamento  │
+│──────────────│        │───────────────────│
+│ id (PK)      │◄──┐    │ id (PK)           │
+│ nome         │   │    │ orcamento_id (FK) │──┐
+│ email        │   │    │ produto_nome      │  │
+│ senha        │   │    │ preco_m2          │  │
+│ perfil       │   │    │ largura           │  │
+│ criado_em    │   │    │ altura            │  │
+└──────────────┘   │    │ quantidade        │  │
+                   │    │ total             │  │
+┌──────────────┐   │    └───────────────────┘  │
+│   produtos   │   │                           │
+│──────────────│   │    ┌───────────────────┐  │
+│ id (PK)      │   │    │    orcamentos     │◄─┘
+│ nome         │   │    │───────────────────│
+│ preco        │   └────│ usuario_id (FK)   │
+└──────────────┘        │ id (PK)           │
+                        │ cliente           │
+                        │ numero            │
+                        │ total             │
+                        │ status            │
+                        │ criado_em         │
+                        └───────────────────┘
+```
+
+> `orcamentos.usuario_id` → `usuarios.id` · `itens_orcamento.orcamento_id` → `orcamentos.id` (CASCADE DELETE)
+
 ### 3.3 Dados iniciais
 
 Após criar as tabelas, rode no SQL Editor:

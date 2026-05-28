@@ -1,4 +1,4 @@
-const BASE = 'http://localhost:3001';
+const BASE = '';
 
 function getToken() {
   return localStorage.getItem('print_token') ?? '';

@@ -1,26 +1,4 @@
-import 'dotenv/config';
-import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
-import usuariosRoutes from './routes/usuarios.js';
-import authRoutes from './routes/auth.js';
-import orcamentosRoutes from './routes/orcamentos.js';
-import relatoriosRoutes from './routes/relatorios.js';
+import app from './app.js';
 
-const app = express();
 const PORT = process.env.PORT || 3001;
-
-app.use(helmet());
-app.use(cors({ origin: 'http://localhost:5175' }));
-app.use(express.json({ limit: '1mb' }));
-
-app.get('/health', (_req, res) => res.json({ status: 'ok' }));
-
-app.use('/api/usuarios', usuariosRoutes);
-app.use('/api/auth', authRoutes);
-app.use('/api/orcamentos', orcamentosRoutes);
-app.use('/api/relatorios', relatoriosRoutes);
-
-app.listen(PORT, () => {
-  console.log(`Servidor rodando em http://localhost:${PORT}`);
-});
+app.listen(PORT, () => console.log(`Servidor rodando em http://localhost:${PORT}`));
