@@ -699,12 +699,12 @@ input.has-eye { padding-right: 42px !important; padding-left: 14px; }
 .orc-table-wrap .orc-thead,
 .orc-table-wrap .orc-row {
   display: grid;
-  grid-template-columns: 78px 1fr 92px 112px 96px 90px;
+  grid-template-columns: 78px 1fr 92px 112px 100px 130px;
   align-items: center;
 }
 .orc-table-wrap.orc-admin .orc-thead,
 .orc-table-wrap.orc-admin .orc-row {
-  grid-template-columns: 78px 1fr 130px 92px 112px 96px 90px;
+  grid-template-columns: 78px 1fr 130px 92px 112px 100px 140px;
 }
 
 .orc-thead {
