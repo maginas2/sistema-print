@@ -31,4 +31,9 @@ app.use('/api/auth',       authRoutes);
 app.use('/api/orcamentos', orcamentosRoutes);
 app.use('/api/relatorios', relatoriosRoutes);
 
+app.use((err, _req, res, _next) => {
+  console.error('[ERRO]', err.message, err.stack);
+  res.status(500).json({ erro: err.message });
+});
+
 export default app;
