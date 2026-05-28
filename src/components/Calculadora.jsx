@@ -50,7 +50,7 @@ export default function Calculadora({ produtos, produtoInicial, onSalvarHistoric
   }
 
   function calcular() {
-    const toNum = v => parseFloat(String(v).replace(',', '.'));
+    const toNum = v => parseFloat(String(v).replace(',', '.').replace(/\.$/, '')) || 0;
     if (!produto.trim())        { alert('Informe o nome do produto ou material.'); return; }
     if (toNum(preco) <= 0)      { alert('Informe o preço por m² maior que zero.'); return; }
     if (toNum(largura) <= 0 || toNum(altura) <= 0) { alert('Informe largura e altura maiores que zero.'); return; }
@@ -195,7 +195,7 @@ export default function Calculadora({ produtos, produtoInicial, onSalvarHistoric
               <label>Preço por m²<span className="req">*</span></label>
               <div className="input-wrap">
                 <span className="input-prefix">R$</span>
-                <input type="number" className="has-prefix" placeholder="0,00" min="0" step="0.01" value={preco} onChange={e => setPreco(e.target.value)} onKeyDown={handleKeyDown} />
+                <input type="text" inputMode="decimal" className="has-prefix" placeholder="0,00" value={preco} onChange={e => setPreco(e.target.value)} onKeyDown={handleKeyDown} />
               </div>
             </div>
           </div>
@@ -205,14 +205,14 @@ export default function Calculadora({ produtos, produtoInicial, onSalvarHistoric
             <div className="field">
               <label>Largura<span className="req">*</span></label>
               <div className="input-wrap">
-                <input type="number" className="has-suffix" placeholder="0,00" min="0" step="0.01" value={largura} onChange={e => setLargura(e.target.value)} onKeyDown={handleKeyDown} />
+                <input type="text" inputMode="decimal" className="has-suffix" placeholder="0,00" value={largura} onChange={e => setLargura(e.target.value)} onKeyDown={handleKeyDown} />
                 <span className="input-suffix">m</span>
               </div>
             </div>
             <div className="field">
               <label>Altura<span className="req">*</span></label>
               <div className="input-wrap">
-                <input type="number" className="has-suffix" placeholder="0,00" min="0" step="0.01" value={altura} onChange={e => setAltura(e.target.value)} onKeyDown={handleKeyDown} />
+                <input type="text" inputMode="decimal" className="has-suffix" placeholder="0,00" value={altura} onChange={e => setAltura(e.target.value)} onKeyDown={handleKeyDown} />
                 <span className="input-suffix">m</span>
               </div>
             </div>
