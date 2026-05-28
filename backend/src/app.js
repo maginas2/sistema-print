@@ -9,16 +9,17 @@ import relatoriosRoutes from './routes/relatorios.js';
 
 const app = express();
 
-const allowedOrigins = [
-  'http://localhost:5175',
-  ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
-  ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim()) : []),
-];
+const extraOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
+  : [];
 
 app.use(helmet());
 app.use(cors({
   origin: (origin, cb) => {
-    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+    if (!origin) return cb(null, true);
+    if (origin === 'http://localhost:5175') return cb(null, true);
+    if (process.env.VERCEL && origin.endsWith('.vercel.app')) return cb(null, true);
+    if (extraOrigins.includes(origin)) return cb(null, true);
     cb(new Error('CORS não permitido'));
   },
 }));
