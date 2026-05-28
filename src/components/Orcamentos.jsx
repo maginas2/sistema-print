@@ -7,7 +7,7 @@ const STATUS_TABS = [
   { value: 'concluido', label: 'Concluídos'  },
 ];
 
-export default function Orcamentos({ historico, onRecarregar, onAtualizarStatus, carregando, usuario }) {
+export default function Orcamentos({ historico, onRecarregar, onAtualizarStatus, onExcluir, carregando, usuario }) {
   const isAdmin = usuario?.perfil === 'admin';
   const [busca,        setBusca]        = useState('');
   const [statusFiltro, setStatusFiltro] = useState('todos');
@@ -34,6 +34,12 @@ export default function Orcamentos({ historico, onRecarregar, onAtualizarStatus,
 
   function toggleStatus(o) {
     onAtualizarStatus(o.id, o.status === 'concluido' ? 'pendente' : 'concluido');
+  }
+
+  function confirmarExcluir(o) {
+    if (window.confirm(`Excluir o orçamento #${o.numero} de ${o.cliente}? Essa ação não pode ser desfeita.`)) {
+      onExcluir(o.id);
+    }
   }
 
   return (
@@ -130,13 +136,22 @@ export default function Orcamentos({ historico, onRecarregar, onAtualizarStatus,
                 </span>
               </span>
               <span className="orc-total">{fmt(o.total)}</span>
-              <span className="orc-align-center">
+              <span className="orc-align-center orc-acoes">
                 <button
                   className={`btn-status-toggle ${o.status === 'concluido' ? 'btn-toggle-reabrir' : 'btn-toggle-concluir'}`}
                   onClick={() => toggleStatus(o)}
                 >
                   {o.status === 'concluido' ? 'Reabrir' : 'Concluir'}
                 </button>
+                {isAdmin && (
+                  <button
+                    className="btn-excluir-orc"
+                    onClick={() => confirmarExcluir(o)}
+                    title="Excluir orçamento"
+                  >
+                    <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                  </button>
+                )}
               </span>
             </div>
           ))

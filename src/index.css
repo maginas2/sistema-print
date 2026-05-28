@@ -155,7 +155,7 @@ body { min-height: 100vh; background: var(--gray-100); }
 }
 
 .page-header h1 span { color: var(--blue); }
-.page-header p { font-size: 14px; color: var(--gray-600); line-height: 1.6; }
+.page-header p { display: none; }
 
 /* ─── Tab Panels ─────────────────────────────── */
 .tab-panel { display: none; flex-direction: column; gap: 24px; }
@@ -731,6 +731,11 @@ input[type="date"]:focus { border-color: var(--blue); background: #fff; box-shad
 .btn-toggle-concluir:hover { background: #A7F3D0; }
 .btn-toggle-reabrir  { background: var(--gray-100); color: var(--gray-600); border: 1px solid var(--gray-200); }
 .btn-toggle-reabrir:hover  { background: var(--gray-200); }
+.orc-acoes { display: flex; align-items: center; gap: 6px; justify-content: center; }
+.btn-excluir-orc { width: 28px; height: 28px; border-radius: 6px; border: none; background: #FEE2E2; color: #DC2626; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background .2s, transform .1s; }
+.btn-excluir-orc svg { width: 15px; height: 15px; fill: currentColor; }
+.btn-excluir-orc:hover { background: #FECACA; }
+.btn-excluir-orc:active { transform: scale(.95); }
 
 /* ── Dashboard hist com status ────────────── */
 .hist-status      .hist-header,

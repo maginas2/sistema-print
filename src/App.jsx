@@ -69,6 +69,13 @@ export default function App() {
     } catch { /* silently fail */ }
   }
 
+  async function excluirOrcamento(id) {
+    try {
+      await apiFetch(`/api/orcamentos/${id}`, { method: 'DELETE' });
+      recarregar();
+    } catch { /* silently fail */ }
+  }
+
   function handleLogout() {
     localStorage.removeItem('print_usuario');
     localStorage.removeItem('print_token');
@@ -183,6 +190,7 @@ export default function App() {
             historico={historico}
             onRecarregar={recarregar}
             onAtualizarStatus={atualizarStatus}
+            onExcluir={excluirOrcamento}
             carregando={carregando}
             usuario={usuario}
           />
