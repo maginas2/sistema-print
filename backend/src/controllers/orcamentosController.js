@@ -22,13 +22,16 @@ export async function listar(req, res) {
 }
 
 export async function proximoNumero(req, res) {
-  const { count, error } = await supabase
+  const { data, error } = await supabase
     .from('orcamentos')
-    .select('*', { count: 'exact', head: true });
+    .select('numero')
+    .order('id', { ascending: false })
+    .limit(1);
 
   if (error) return res.status(500).json({ erro: 'Erro ao gerar número.' });
 
-  const numero = String((count || 0) + 1).padStart(4, '0');
+  const ultimo = data?.[0]?.numero ? parseInt(data[0].numero, 10) : 0;
+  const numero = String((isNaN(ultimo) ? 0 : ultimo) + 1).padStart(4, '0');
   return res.json({ numero });
 }
 
@@ -42,11 +45,12 @@ export async function buscarPorNumero(req, res) {
     .from('orcamentos')
     .select('id, cliente, numero, total, observacao, criado_em, status, usuarios(nome), itens_orcamento(id, produto_nome, preco_m2, largura, altura, quantidade, total)')
     .eq('numero', numero)
-    .maybeSingle();
+    .order('id', { ascending: false })
+    .limit(1);
 
   if (error) return res.status(500).json({ erro: 'Erro ao buscar orçamento.' });
-  if (!data)  return res.status(404).json({ erro: 'Orçamento não encontrado.' });
-  return res.json(data);
+  if (!data || data.length === 0) return res.status(404).json({ erro: 'Orçamento não encontrado.' });
+  return res.json(data[0]);
 }
 
 export async function salvar(req, res) {
