@@ -2,6 +2,8 @@
 
 Sistema web completo para gestão de orçamentos, catálogo de produtos, relatórios e controle de usuários para gráficas e empresas de comunicação visual.
 
+> **Desenvolvedor:** Gustavo Magina — @maginas2(git hub)
+
 ---
 
 ## Sumário
@@ -26,11 +28,11 @@ O sistema é dividido em **frontend React** e **backend Node.js/Express**, integ
 | Módulo | Descrição |
 |---|---|
 | Visão Geral | Dashboard com estatísticas, histórico recente e atalhos |
-| Calculadora | Cálculo de orçamentos por m², campo de observação, geração de PDF |
+| Calculadora | Cálculo por m² ou serviço fixo, campo de observação, geração de PDF |
 | Produtos | Catálogo de materiais com preços por m² |
-| Orçamentos | Listagem completa com busca, filtros e controle de status |
-| Pedido de Venda | Gera PDF de pedido de venda a partir de orçamentos, com histórico de emissões |
-| Relatórios | Análise por período, usuário e status, exportável em PDF |
+| Orçamentos | Listagem com filtros de período, status e tipo; visualização, edição e download de PDF |
+| Pedido de Venda | Emite PDF de pedido de venda; filtros de período e status; histórico de emissões |
+| Relatórios | Análise por período, tipo, usuário e status, exportável em PDF |
 | Usuários | Cadastro e gestão de acessos *(somente admin)* |
 
 ---
@@ -317,16 +319,26 @@ Exibe estatísticas gerais, os 6 orçamentos mais recentes e atalhos rápidos pa
 
 ### Calculadora
 
-1. O **número do orçamento** é gerado automaticamente
-2. Preencha o **nome do cliente**
-3. Preencha o campo **Observação** (opcional) — instruções de entrega, prazo, detalhes extras
-4. Selecione um produto do catálogo ou preencha manualmente (nome + preço/m²)
-5. Informe largura, altura e quantidade (aceita vírgula como separador decimal)
-6. Clique em **Calcular** → depois em **Adicionar ao orçamento**
-7. Repita para cada item
-8. Clique em **Salvar no Sistema** para registrar e em **Gerar PDF** para baixar
+A calculadora oferece dois modos, alternáveis pelo toggle no topo do formulário:
 
-> A observação é salva junto com o orçamento no banco e exibida no Pedido de Venda quando o orçamento é selecionado.
+**Modo Cálculo por m²**
+1. O **número do orçamento** é gerado automaticamente
+2. Preencha o **nome do cliente** e o campo **Observação** (opcional)
+3. Selecione um produto do catálogo ou preencha manualmente (nome + preço/m²)
+4. Informe largura, altura e quantidade
+5. Clique em **Calcular** → depois em **Adicionar ao orçamento**
+6. Repita para cada item
+
+**Modo Serviço Fixo**
+1. Informe o **nome do serviço** (ex: "Colar adesivo em carro", "Troca de lona")
+2. Informe o **preço do serviço** e a quantidade
+3. Clique em **Calcular serviço** → depois em **Adicionar ao orçamento**
+
+Itens dos dois modos convivem no mesmo orçamento. Na lista de itens, cada um exibe um badge **M²** (verde) ou **SERVIÇO** (azul). O PDF e o banco tratam cada tipo corretamente.
+
+Ao finalizar: **Salvar no Sistema** registra no banco; **Gerar PDF** baixa o arquivo.
+
+> A observação é salva junto ao orçamento e exibida em destaque no Pedido de Venda.
 
 ### Produtos
 
@@ -336,10 +348,17 @@ Exibe estatísticas gerais, os 6 orçamentos mais recentes e atalhos rápidos pa
 
 ### Orçamentos
 
-- Listagem completa dos orçamentos (admin vê todos, operador vê os próprios)
-- Filtros por status: **Todos / Pendentes / Concluídos**
+- Listagem completa (admin vê todos, operador vê os próprios)
+- **Filtro de período:** Tudo / Hoje / Semana / Mês / Ano
+- **Filtro de status:** Todos / Pendentes / Concluídos
+- **Filtro de tipo:** Sob Medida / Serviço / Misto / Sem itens — calculado a partir dos itens salvos
 - Busca por nome de cliente ou número do orçamento
-- Botão **Concluir / Reabrir** para alternar o status de cada orçamento
+- **Coluna Tipo** na tabela: badge visual indicando o tipo de cada orçamento
+- Botão **Concluir / Reabrir** para alternar o status
+- Ícone **Visualizar** (olho): modal com todos os detalhes, itens, observação e atalhos para editar/baixar PDF
+- Ícone **Editar** (lápis): modal de edição com campos do cliente, observação, lista de itens (adicionar/remover m² e serviço), botão Baixar PDF antes de salvar
+- Ícone **Download**: gera e baixa o PDF do orçamento diretamente da lista
+- **Modal de exclusão** com confirmação visual (substitui o `window.confirm` nativo)
 - Admin pode excluir orçamentos
 
 ### Pedido de Venda
@@ -360,8 +379,13 @@ Aba dedicada à emissão de pedidos de venda em PDF a partir de orçamentos exis
 
 **Fallback para orçamentos antigos:** orçamentos criados antes da atualização (sem itens salvos individualmente) exibem uma linha "Conforme orçamento nº XXXX" com o total consolidado.
 
+**Filtros da lista:**
+- **Período:** Tudo / Hoje / Semana / Mês / Ano
+- **Status:** Todos / Pendente / Concluído
+- Busca por cliente ou número do orçamento
+
 **Histórico de Pedidos Gerados** (card abaixo da lista):
-- Mostra todos os pedidos emitidos com filtro de período (Todos / Este mês / Esta semana / Este ano)
+- Filtro de período próprio (Todos / Este mês / Esta semana / Este ano)
 - Cards de estatísticas: total de pedidos, valor total, ticket médio e maior pedido
 - Tabela: Nº Orçamento · Cliente · Vendedor · Data · Total Final
 - Operadores veem apenas os próprios pedidos; admin vê todos
@@ -370,9 +394,10 @@ Aba dedicada à emissão de pedidos de venda em PDF a partir de orçamentos exis
 
 - Selecione o **período**: Hoje, Semana, Mês, Ano, Personalizado ou Tudo
 - Filtre por **status** (todos, pendentes ou concluídos)
+- Filtre por **tipo de serviço**: Todos / Sob Medida / Serviço Fixo / Misto / Sem itens
 - Admins podem filtrar por **usuário específico**
-- Cards de estatísticas: total de orçamentos, valor total, ticket médio e maior orçamento
-- O botão **Relatório Resumido** busca os dados e gera o PDF em uma única ação
+- Cards de estatísticas recalculados conforme os filtros aplicados: total, valor total, ticket médio, maior orçamento
+- O botão **Gerar Relatório** busca os dados e gera o PDF em uma única ação
 
 **Layout do PDF do relatório:**
 - Cabeçalho com a **logo da empresa centralizada** sobre fundo escuro
@@ -413,16 +438,17 @@ O sistema possui suporte completo a modo escuro, ativado pelo botão na parte in
 | Funcionalidade | Operador | Admin |
 |---|:---:|:---:|
 | Dashboard | ✓ | ✓ |
-| Calculadora (com observação) | ✓ | ✓ |
+| Calculadora — m² e Serviço Fixo | ✓ | ✓ |
 | Produtos (visualizar/editar) | ✓ | ✓ |
 | Produtos (excluir) | — | ✓ |
 | Orçamentos (próprios) | ✓ | — |
 | Orçamentos (todos) | — | ✓ |
+| Orçamentos (visualizar / editar / baixar PDF) | ✓ | ✓ |
 | Orçamentos (excluir) | — | ✓ |
 | Pedido de Venda (próprios) | ✓ | — |
 | Pedido de Venda (todos / histórico global) | — | ✓ |
-| Relatórios (próprios) | ✓ | — |
-| Relatórios (todos os usuários) | — | ✓ |
+| Relatórios (próprios + filtro de tipo) | ✓ | — |
+| Relatórios (todos os usuários + filtro de tipo) | — | ✓ |
 | Gestão de Usuários | — | ✓ |
 
 ---
@@ -532,6 +558,7 @@ Todas as rotas (exceto `/api/auth/login`) exigem o header `Authorization: Bearer
 | POST | `/api/orcamentos` | Salva orçamento com itens e observação |
 | GET | `/api/orcamentos/proximo-numero` | Retorna o próximo número sequencial |
 | GET | `/api/orcamentos/por-numero/:numero` | Retorna orçamento completo (com itens) pelo número |
+| PUT | `/api/orcamentos/:id` | Atualiza cliente, observação e itens do orçamento |
 | PATCH | `/api/orcamentos/:id/status` | Altera status (`pendente` / `concluido`) |
 | DELETE | `/api/orcamentos/:id` | Exclui orçamento e seus itens (CASCADE) |
 
