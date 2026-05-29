@@ -1,5 +1,7 @@
 import { useState, useMemo } from 'react';
 import { fmt } from '../utils/fmt';
+import { apiFetch } from '../lib/api.js';
+import { gerarPDF } from '../utils/pdf.js';
 
 const STATUS_TABS = [
   { value: 'todos',     label: 'Todos'       },
@@ -9,8 +11,59 @@ const STATUS_TABS = [
 
 export default function Orcamentos({ historico, onRecarregar, onAtualizarStatus, onExcluir, carregando, usuario }) {
   const isAdmin = usuario?.perfil === 'admin';
-  const [busca,        setBusca]        = useState('');
-  const [statusFiltro, setStatusFiltro] = useState('todos');
+  const [busca,              setBusca]              = useState('');
+  const [statusFiltro,       setStatusFiltro]       = useState('todos');
+  const [baixando,           setBaixando]           = useState(null);
+  const [orcParaExcluir,     setOrcParaExcluir]     = useState(null);
+
+  async function handleDownload(o) {
+    setBaixando(o.id);
+    try {
+      const res = await apiFetch(`/api/orcamentos/por-numero/${encodeURIComponent(o.numero)}`);
+      if (!res.ok) return;
+      const dados = await res.json();
+
+      const itens = (dados.itens_orcamento || []).length > 0
+        ? dados.itens_orcamento.map(item => {
+            const area      = (parseFloat(item.largura) || 0) * (parseFloat(item.altura) || 0);
+            const valorUnit = (parseFloat(item.preco_m2) || 0) * area;
+            return {
+              produto:    item.produto_nome,
+              largura:    parseFloat(item.largura)  || 0,
+              altura:     parseFloat(item.altura)   || 0,
+              quantidade: parseInt(item.quantidade) || 1,
+              preco:      parseFloat(item.preco_m2) || 0,
+              area,
+              valorUnit,
+              total:      parseFloat(item.total)    || 0,
+            };
+          })
+        : [{
+            produto: 'Conforme orçamento',
+            largura: 0, altura: 0, quantidade: 1,
+            preco: 0, area: 0,
+            valorUnit: parseFloat(dados.total) || 0,
+            total:     parseFloat(dados.total) || 0,
+          }];
+
+      await gerarPDF({
+        cliente: dados.cliente,
+        numero:  dados.numero,
+        data:    dados.criado_em
+          ? new Date(dados.criado_em).toLocaleDateString('pt-BR')
+          : new Date().toLocaleDateString('pt-BR'),
+        itens,
+      });
+    } catch { /* silencioso */ }
+    finally { setBaixando(null); }
+  }
+
+  function confirmarExcluir(o) { setOrcParaExcluir(o); }
+
+  function executarExcluir() {
+    if (orcParaExcluir) onExcluir(orcParaExcluir.id);
+    setOrcParaExcluir(null);
+  }
 
   const filtrados = useMemo(() => {
     return historico
@@ -36,135 +89,215 @@ export default function Orcamentos({ historico, onRecarregar, onAtualizarStatus,
     onAtualizarStatus(o.id, o.status === 'concluido' ? 'pendente' : 'concluido');
   }
 
-  function confirmarExcluir(o) {
-    if (window.confirm(`Excluir o orçamento #${o.numero} de ${o.cliente}? Essa ação não pode ser desfeita.`)) {
-      onExcluir(o.id);
-    }
-  }
-
   return (
-    <div className="card" style={{ overflow: 'visible' }}>
-      {/* ── Header ──────────────────────────────── */}
-      <div className="card-header">
-        <div className="card-header-icon">
-          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11zM8 15h8v2H8zm0-4h8v2H8zm0-4h5v2H8z"/></svg>
+    <>
+      <div className="card" style={{ overflow: 'visible' }}>
+        {/* ── Header ──────────────────────────────── */}
+        <div className="card-header">
+          <div className="card-header-icon">
+            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11zM8 15h8v2H8zm0-4h8v2H8zm0-4h5v2H8z"/></svg>
+          </div>
+          <div style={{ flex: 1 }}>
+            <h2>Gerenciamento de Orçamentos</h2>
+            <p>
+              {contagens.todos} registrado{contagens.todos !== 1 ? 's' : ''} —&nbsp;
+              <span style={{ color: 'rgba(255,255,255,.6)' }}>
+                {contagens.pendente} pendente{contagens.pendente !== 1 ? 's' : ''},&nbsp;
+                {contagens.concluido} concluído{contagens.concluido !== 1 ? 's' : ''}
+              </span>
+            </p>
+          </div>
+          <button
+            className="btn-limpar-hist"
+            onClick={onRecarregar}
+            disabled={carregando}
+            style={{ opacity: carregando ? .5 : 1, flexShrink: 0 }}
+          >
+            <svg viewBox="0 0 24 24" style={{ width: 12, height: 12, fill: 'currentColor', marginRight: 4, verticalAlign: 'middle', animation: carregando ? 'spin .8s linear infinite' : 'none' }}>
+              <path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/>
+            </svg>
+            {carregando ? 'Atualizando…' : 'Atualizar'}
+          </button>
         </div>
-        <div style={{ flex: 1 }}>
-          <h2>Gerenciamento de Orçamentos</h2>
-          <p>
-            {contagens.todos} registrado{contagens.todos !== 1 ? 's' : ''} —&nbsp;
-            <span style={{ color: 'rgba(255,255,255,.6)' }}>
-              {contagens.pendente} pendente{contagens.pendente !== 1 ? 's' : ''},&nbsp;
-              {contagens.concluido} concluído{contagens.concluido !== 1 ? 's' : ''}
-            </span>
-          </p>
-        </div>
-        <button
-          className="btn-limpar-hist"
-          onClick={onRecarregar}
-          disabled={carregando}
-          style={{ opacity: carregando ? .5 : 1, flexShrink: 0 }}
-        >
-          <svg viewBox="0 0 24 24" style={{ width: 12, height: 12, fill: 'currentColor', marginRight: 4, verticalAlign: 'middle', animation: carregando ? 'spin .8s linear infinite' : 'none' }}>
-            <path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/>
-          </svg>
-          {carregando ? 'Atualizando…' : 'Atualizar'}
-        </button>
-      </div>
 
-      {/* ── Busca + Tabs ─────────────────────────── */}
-      <div className="orc-toolbar">
-        <div className="orc-search-wrap">
-          <svg viewBox="0 0 24 24" className="orc-search-icon">
-            <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
-          </svg>
-          <input
-            type="text"
-            className="orc-search-input"
-            placeholder={`Buscar por cliente ou nº do orçamento…`}
-            value={busca}
-            onChange={e => setBusca(e.target.value)}
-          />
-          {busca && (
-            <button className="orc-search-clear" onClick={() => setBusca('')}>✕</button>
+        {/* ── Busca + Tabs ─────────────────────────── */}
+        <div className="orc-toolbar">
+          <div className="orc-search-wrap">
+            <svg viewBox="0 0 24 24" className="orc-search-icon">
+              <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+            </svg>
+            <input
+              type="text"
+              className="orc-search-input"
+              placeholder="Buscar por cliente ou nº do orçamento…"
+              value={busca}
+              onChange={e => setBusca(e.target.value)}
+            />
+            {busca && (
+              <button className="orc-search-clear" onClick={() => setBusca('')}>✕</button>
+            )}
+          </div>
+
+          <div className="orc-tabs">
+            {STATUS_TABS.map(t => (
+              <button
+                key={t.value}
+                className={`orc-tab${statusFiltro === t.value ? ' active' : ''}`}
+                onClick={() => setStatusFiltro(t.value)}
+              >
+                {t.value === 'pendente'  && <span className="orc-tab-dot" style={{ background: 'var(--yellow-dark)' }} />}
+                {t.value === 'concluido' && <span className="orc-tab-dot" style={{ background: 'var(--green)' }} />}
+                {t.label}
+                <span className="orc-tab-count">{contagens[t.value]}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Tabela ───────────────────────────────── */}
+        <div className={`orc-table-wrap${isAdmin ? ' orc-admin' : ''}`}>
+          <div className="orc-thead">
+            <span>Nº</span>
+            <span>Cliente</span>
+            {isAdmin && <span>Feito por</span>}
+            <span>Data</span>
+            <span>Status</span>
+            <span className="orc-align-right">Total</span>
+            <span className="orc-align-center">Ação</span>
+          </div>
+
+          {filtrados.length === 0 ? (
+            <div className="empty-state" style={{ padding: '48px 20px' }}>
+              <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg>
+              <p>{busca ? 'Nenhum resultado para sua busca.' : 'Nenhum orçamento nesta categoria.'}</p>
+            </div>
+          ) : (
+            filtrados.map(o => (
+              <div key={o.id} className="orc-row">
+                <span className="orc-num">#{o.numero}</span>
+                <span className="orc-cliente">{o.cliente}</span>
+                {isAdmin && <span className="orc-feito-por">{o.usuario_nome}</span>}
+                <span className="orc-data">{o.data}</span>
+                <span>
+                  <span className={`status-badge status-${o.status}`}>
+                    {o.status === 'concluido' ? '✓ Concluído' : '● Pendente'}
+                  </span>
+                </span>
+                <span className="orc-total">{fmt(o.total)}</span>
+                <span className="orc-align-center orc-acoes">
+                  <button
+                    className={`btn-status-toggle ${o.status === 'concluido' ? 'btn-toggle-reabrir' : 'btn-toggle-concluir'}`}
+                    onClick={() => toggleStatus(o)}
+                  >
+                    {o.status === 'concluido' ? 'Reabrir' : 'Concluir'}
+                  </button>
+                  <button
+                    className="btn-excluir-orc"
+                    onClick={() => handleDownload(o)}
+                    disabled={baixando === o.id}
+                    title="Baixar PDF do orçamento"
+                    style={{ color: 'var(--blue)' }}
+                  >
+                    {baixando === o.id
+                      ? <svg viewBox="0 0 24 24" style={{ width: 16, height: 16, fill: 'currentColor', animation: 'spin .8s linear infinite' }}><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>
+                      : <svg viewBox="0 0 24 24" style={{ width: 16, height: 16, fill: 'currentColor' }}><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                    }
+                  </button>
+                  {isAdmin && (
+                    <button
+                      className="btn-excluir-orc"
+                      onClick={() => confirmarExcluir(o)}
+                      title="Excluir orçamento"
+                    >
+                      <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                    </button>
+                  )}
+                </span>
+              </div>
+            ))
           )}
         </div>
 
-        <div className="orc-tabs">
-          {STATUS_TABS.map(t => (
-            <button
-              key={t.value}
-              className={`orc-tab${statusFiltro === t.value ? ' active' : ''}`}
-              onClick={() => setStatusFiltro(t.value)}
-            >
-              {t.value === 'pendente' && <span className="orc-tab-dot" style={{ background: 'var(--yellow-dark)' }} />}
-              {t.value === 'concluido' && <span className="orc-tab-dot" style={{ background: 'var(--green)' }} />}
-              {t.label}
-              <span className="orc-tab-count">{contagens[t.value]}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* ── Tabela ───────────────────────────────── */}
-      <div className={`orc-table-wrap${isAdmin ? ' orc-admin' : ''}`}>
-        <div className="orc-thead">
-          <span>Nº</span>
-          <span>Cliente</span>
-          {isAdmin && <span>Feito por</span>}
-          <span>Data</span>
-          <span>Status</span>
-          <span className="orc-align-right">Total</span>
-          <span className="orc-align-center">Ação</span>
-        </div>
-
-        {filtrados.length === 0 ? (
-          <div className="empty-state" style={{ padding: '48px 20px' }}>
-            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg>
-            <p>{busca ? 'Nenhum resultado para sua busca.' : 'Nenhum orçamento nesta categoria.'}</p>
+        {/* ── Footer ───────────────────────────────── */}
+        {filtrados.length > 0 && (
+          <div className="orc-footer">
+            Mostrando <strong>{filtrados.length}</strong> de <strong>{historico.length}</strong> orçamentos
+            {busca && <> para "<strong>{busca}</strong>"</>}
           </div>
-        ) : (
-          filtrados.map(o => (
-            <div key={o.id} className="orc-row">
-              <span className="orc-num">#{o.numero}</span>
-              <span className="orc-cliente">{o.cliente}</span>
-              {isAdmin && <span className="orc-feito-por">{o.usuario_nome}</span>}
-              <span className="orc-data">{o.data}</span>
-              <span>
-                <span className={`status-badge status-${o.status}`}>
-                  {o.status === 'concluido' ? '✓ Concluído' : '● Pendente'}
-                </span>
-              </span>
-              <span className="orc-total">{fmt(o.total)}</span>
-              <span className="orc-align-center orc-acoes">
-                <button
-                  className={`btn-status-toggle ${o.status === 'concluido' ? 'btn-toggle-reabrir' : 'btn-toggle-concluir'}`}
-                  onClick={() => toggleStatus(o)}
-                >
-                  {o.status === 'concluido' ? 'Reabrir' : 'Concluir'}
-                </button>
-                {isAdmin && (
-                  <button
-                    className="btn-excluir-orc"
-                    onClick={() => confirmarExcluir(o)}
-                    title="Excluir orçamento"
-                  >
-                    <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-                  </button>
-                )}
-              </span>
-            </div>
-          ))
         )}
       </div>
 
-      {/* ── Footer ───────────────────────────────── */}
-      {filtrados.length > 0 && (
-        <div className="orc-footer">
-          Mostrando <strong>{filtrados.length}</strong> de <strong>{historico.length}</strong> orçamentos
-          {busca && <> para "<strong>{busca}</strong>"</>}
+      {/* ── Modal de confirmação de exclusão ─────── */}
+      {orcParaExcluir && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 1000,
+            background: 'rgba(0,0,0,.55)', backdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+          onClick={() => setOrcParaExcluir(null)}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: 'var(--card-bg)', borderRadius: 16,
+              padding: '32px 28px', width: 360, boxShadow: '0 24px 64px rgba(0,0,0,.35)',
+              border: '1px solid var(--gray-200)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
+              <div style={{
+                width: 44, height: 44, borderRadius: 12, flexShrink: 0,
+                background: 'var(--red-light)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <svg viewBox="0 0 24 24" style={{ width: 22, height: 22, fill: 'var(--red)' }}>
+                  <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                </svg>
+              </div>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--gray-800)' }}>Excluir orçamento</div>
+                <div style={{ fontSize: 13, color: 'var(--gray-600)', marginTop: 2 }}>Essa ação não pode ser desfeita</div>
+              </div>
+            </div>
+
+            <div style={{
+              background: 'var(--gray-50)', borderRadius: 10, padding: '12px 16px',
+              marginBottom: 24, border: '1px solid var(--gray-200)',
+            }}>
+              <div style={{ fontSize: 13, color: 'var(--gray-600)', marginBottom: 4 }}>Orçamento selecionado</div>
+              <div style={{ fontWeight: 700, color: 'var(--gray-800)', fontSize: 15 }}>
+                #{orcParaExcluir.numero} — {orcParaExcluir.cliente}
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--gray-600)', marginTop: 2 }}>
+                Total: {fmt(parseFloat(orcParaExcluir.total) || 0)}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={() => setOrcParaExcluir(null)}
+                style={{
+                  flex: 1, height: 42, borderRadius: 10, border: '2px solid var(--gray-200)',
+                  background: 'transparent', color: 'var(--gray-800)', fontWeight: 600,
+                  fontSize: 14, cursor: 'pointer',
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={executarExcluir}
+                style={{
+                  flex: 1, height: 42, borderRadius: 10, border: 'none',
+                  background: 'var(--red)', color: '#fff', fontWeight: 700,
+                  fontSize: 14, cursor: 'pointer',
+                }}
+              >
+                Sim, excluir
+              </button>
+            </div>
+          </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

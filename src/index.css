@@ -209,8 +209,8 @@ body { min-height: 100vh; background: var(--body-bg); }
 .input-suffix { right: 12px; }
 
 input[type="number"], input[type="text"], input[type="password"] { width: 100%; height: 48px; border: 2px solid var(--gray-200); border-radius: var(--radius); font-family: inherit; font-size: 15px; font-weight: 600; color: var(--gray-800); background: var(--gray-50); outline: none; transition: border-color .2s, box-shadow .2s, background .2s; }
-input[type="number"].has-prefix  { padding: 0 14px 0 40px; }
-input[type="number"].has-suffix  { padding: 0 42px 0 14px; }
+input[type="number"].has-prefix, input[type="text"].has-prefix  { padding: 0 14px 0 40px; }
+input[type="number"].has-suffix, input[type="text"].has-suffix  { padding: 0 42px 0 14px; }
 input[type="number"].plain, input[type="text"], input[type="password"] { padding: 0 14px; }
 input:focus { border-color: var(--blue); background: var(--card-bg); box-shadow: 0 0 0 3px rgba(26,86,219,.12); }
 input::-webkit-inner-spin-button, input::-webkit-outer-spin-button { -webkit-appearance: none; }
