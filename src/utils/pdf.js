@@ -172,6 +172,253 @@ export async function gerarRelatoriosPDF({ registros, stats, labelPeriodo, filtr
   doc.save(`relatorio-orcamentos-${hoje.replace(/\//g, '-')}.pdf`);
 }
 
+export async function gerarPedidoVendaPDF({ cliente, numero, vendedor, situacao, condicoes, desconto, itens, totalOrcamento = 0 }) {
+  const imgLogo = await toBase64(logoUrl);
+
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const W  = 210;
+  const ML = 10;
+  const CW = W - ML * 2; // 190mm
+
+  const rgb   = h => [parseInt(h.slice(1,3),16), parseInt(h.slice(3,5),16), parseInt(h.slice(5,7),16)];
+  const fill  = c => doc.setFillColor(...rgb(c));
+  const color = c => doc.setTextColor(...rgb(c));
+  const draw  = c => doc.setDrawColor(...rgb(c));
+
+  const agora = new Date();
+  const hora  = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const data  = agora.toLocaleDateString('pt-BR');
+
+  // ── Cabeçalho ──────────────────────────────────
+  draw('#000000'); doc.setLineWidth(0.5);
+  doc.rect(ML, 5, CW, 27, 'S');
+
+  const LOGO_H = 16;
+  const LOGO_W = 26;
+  doc.addImage(imgLogo, 'PNG', ML + 3, 5 + (27 - LOGO_H) / 2, LOGO_W, LOGO_H);
+
+  doc.setLineWidth(0.3);
+  doc.line(ML + LOGO_W + 5, 5, ML + LOGO_W + 5, 32);
+
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(13); color('#000000');
+  doc.text('PRINT COMUNICAÇÃO VISUAL', ML + LOGO_W + 8, 13);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8); color('#444444');
+  doc.text('Av. Belém 335 · Centro · Itaituba-PA', ML + LOGO_W + 8, 19);
+
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(9); color('#000000');
+  doc.text('(93)99109-9687', W - ML - 2, 13, { align: 'right' });
+  doc.text('CNPJ 27.499.627/0001-95', W - ML - 2, 19, { align: 'right' });
+
+  let y = 32;
+
+  // ── Título do pedido ────────────────────────────
+  draw('#000000'); doc.setLineWidth(0.5);
+  doc.rect(ML, y, CW, 9, 'S');
+
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(11); color('#000000');
+  doc.text(`PEDIDO DE VENDA ${numero || '—'}`, ML + 3, y + 6);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
+  doc.text(`Hora: ${hora}    Data: ${data}`, W - ML - 2, y + 6, { align: 'right' });
+
+  y += 9;
+
+  // ── Dados do cliente ────────────────────────────
+  draw('#000000'); doc.setLineWidth(0.4);
+  doc.rect(ML, y, CW, 21, 'S');
+
+  const half = CW / 2;
+
+  // linha 1: cliente
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); color('#000000');
+  doc.text('Cliente .:', ML + 3, y + 6);
+  doc.setFont('helvetica', 'normal');
+  doc.text((cliente || '').toUpperCase(), ML + 28, y + 6);
+  doc.line(ML, y + 8, ML + CW, y + 8);
+
+  // linha 2: endereço / bairro
+  doc.setFont('helvetica', 'bold');
+  doc.text('Endereço:', ML + 3, y + 14);
+  doc.line(ML + half, y + 8, ML + half, y + 21);
+  doc.text('Bairro:', ML + half + 3, y + 14);
+  doc.line(ML, y + 15, ML + CW, y + 15);
+
+  // linha 3: cpf / cidade / uf
+  doc.setFont('helvetica', 'bold');
+  doc.text('CPF/Cnpj:', ML + 3, y + 20);
+  doc.text('Cpl:', ML + 45, y + 20);
+  doc.text('Cidade:', ML + half + 3, y + 20);
+  doc.text('UF:', ML + half + 60, y + 20);
+  doc.text('CEP:', ML + half + 75, y + 20);
+
+  y += 21;
+
+  // ── Tabela de itens ─────────────────────────────
+  const C = {
+    ref:  { x: ML,        w: 20 },
+    desc: { x: ML + 20,   w: 68 },
+    uni:  { x: ML + 88,   w: 14 },
+    val:  { x: ML + 102,  w: 22 },
+    qtd:  { x: ML + 124,  w: 22 },
+    dsc:  { x: ML + 146,  w: 16 },
+    vtot: { x: ML + 162,  w: 28 },
+    // 20+68+14+22+22+16+28 = 190 = CW ✓
+  };
+
+  const HDR_H = 8;
+  const ROW_H = 7;
+
+  fill('#FFFFFF'); draw('#000000'); doc.setLineWidth(0.5);
+  doc.rect(ML, y, CW, HDR_H, 'FD');
+
+  doc.setLineWidth(0.3);
+  [C.desc.x, C.uni.x, C.val.x, C.qtd.x, C.dsc.x, C.vtot.x].forEach(x =>
+    doc.line(x, y, x, y + HDR_H)
+  );
+
+  const hy = y + 5.5;
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); color('#000000');
+  doc.text('Referencia',       C.ref.x  + C.ref.w  / 2, hy, { align: 'center' });
+  doc.text('Descrição do Item',C.desc.x + 2,             hy);
+  doc.text('uni',              C.uni.x  + C.uni.w  / 2, hy, { align: 'center' });
+  doc.text('Valor',            C.val.x  + C.val.w  / 2, hy, { align: 'center' });
+  doc.text('Quantia',          C.qtd.x  + C.qtd.w  / 2, hy, { align: 'center' });
+  doc.text('Desc.',            C.dsc.x  + C.dsc.w  / 2, hy, { align: 'center' });
+  doc.text('Valor Total',      C.vtot.x + C.vtot.w / 2, hy, { align: 'center' });
+
+  y += HDR_H;
+
+  const LIMITE_ITENS = 215;
+
+  const linhasItens = itens.length > 0
+    ? itens
+    : [{ produto_nome: 'Conforme orçamento', quantidade: 1, total: totalOrcamento, preco_m2: 0, largura: 0, altura: 0, _fallback: true }];
+
+  linhasItens.forEach((item, idx) => {
+    if (y + ROW_H > LIMITE_ITENS) { doc.addPage(); y = 15; }
+
+    fill('#FFFFFF'); draw('#000000'); doc.setLineWidth(0.3);
+    doc.rect(ML, y, CW, ROW_H, 'FD');
+    [C.desc.x, C.uni.x, C.val.x, C.qtd.x, C.dsc.x, C.vtot.x].forEach(x =>
+      doc.line(x, y, x, y + ROW_H)
+    );
+
+    const ty   = y + 5;
+    const ref  = String(idx + 1).padStart(6, '0');
+    const qty  = parseFloat(item.quantidade) || 1;
+    const tot  = parseFloat(item.total) || 0;
+    const larg = parseFloat(item.largura) || 0;
+    const alt  = parseFloat(item.altura)  || 0;
+    const pm2  = parseFloat(item.preco_m2) || 0;
+    const vUnit = pm2 > 0 ? pm2 : (qty > 0 ? tot / qty : 0);
+
+    // Descrição inclui medidas quando disponíveis
+    const medidas = larg > 0 && alt > 0
+      ? ` ${larg.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}×${alt.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}m`
+      : '';
+    const descCompleta = `${item.produto_nome || '—'}${medidas}`;
+
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8); color('#000000');
+    doc.text(ref, C.ref.x + C.ref.w / 2, ty, { align: 'center' });
+
+    const descTrunc = doc.splitTextToSize(descCompleta, C.desc.w - 4)[0];
+    doc.text(descTrunc, C.desc.x + 2, ty);
+
+    if (!item._fallback) {
+      doc.text(fmt(vUnit), C.val.x + C.val.w - 2, ty, { align: 'right' });
+      doc.text(String(qty), C.qtd.x + C.qtd.w / 2, ty, { align: 'center' });
+      doc.text('0,00',      C.dsc.x + C.dsc.w - 2, ty, { align: 'right' });
+    }
+
+    doc.setFont('helvetica', 'bold');
+    doc.text(fmt(tot), C.vtot.x + C.vtot.w - 2, ty, { align: 'right' });
+
+    y += ROW_H;
+  });
+
+  // ── Rodapé: vendedor + totais ───────────────────
+  y += 4;
+  const FOOT_H = 32;
+  const splitX = ML + CW * 0.56;
+
+  draw('#000000'); doc.setLineWidth(0.4);
+  doc.rect(ML, y, CW, FOOT_H, 'S');
+  doc.line(splitX, y, splitX, y + FOOT_H);
+
+  // Lado esquerdo
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); color('#000000');
+  doc.text('Vendedor:', ML + 3, y + 7);
+  doc.setFont('helvetica', 'normal');
+  doc.text(vendedor || '—', ML + 3 + doc.getTextWidth('Vendedor:') + 2, y + 7);
+
+  doc.setFont('helvetica', 'bold');
+  doc.text('Situação Atual:', ML + 3, y + 14);
+  doc.setFont('helvetica', 'normal');
+  const sitTrunc = doc.splitTextToSize(situacao || '—', splitX - ML - 6)[0];
+  doc.text(sitTrunc, ML + 3 + doc.getTextWidth('Situação Atual:') + 2, y + 14);
+
+  doc.setFont('helvetica', 'bold');
+  doc.text('Condições de Pagamento:', ML + 3, y + 21);
+  doc.setFont('helvetica', 'normal');
+  if (condicoes) {
+    const condLines = doc.splitTextToSize(condicoes, splitX - ML - 6);
+    doc.text(condLines[0], ML + 3, y + 27);
+  }
+
+  // Lado direito: totais
+  const valorProdutos = itens.length > 0
+    ? itens.reduce((s, i) => s + (parseFloat(i.total) || 0), 0)
+    : totalOrcamento;
+  const descNum    = parseFloat(desconto) || 0;
+  const valorTotal = valorProdutos - descNum;
+
+  const rx = splitX + 3;
+
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); color('#000000');
+  doc.text('VALOR PRODUTOS:', rx, y + 7);
+  doc.text(fmt(valorProdutos), W - ML - 2, y + 7, { align: 'right' });
+
+  doc.setLineWidth(0.2); draw('#888888');
+  doc.line(splitX, y + 9, W - ML, y + 9);
+
+  draw('#000000'); doc.setLineWidth(0.4);
+  doc.text('VALOR TOTAL',  rx, y + 14);
+  doc.text(':',            rx + 52, y + 14);
+  doc.text(fmt(valorProdutos), W - ML - 2, y + 14, { align: 'right' });
+
+  doc.setLineWidth(0.2); draw('#888888');
+  doc.line(splitX, y + 16, W - ML, y + 16);
+
+  draw('#000000'); doc.setLineWidth(0.4);
+  doc.text('VALOR DESCONTO:', rx, y + 21);
+  if (descNum > 0) doc.text(fmt(descNum), W - ML - 2, y + 21, { align: 'right' });
+
+  doc.setLineWidth(0.2); draw('#888888');
+  doc.line(splitX, y + 23, W - ML, y + 23);
+
+  draw('#000000'); doc.setLineWidth(0.4);
+  doc.text('VALOR TOTAL',  rx, y + 29);
+  doc.text(':',            rx + 52, y + 29);
+  doc.setFontSize(9.5);
+  doc.text(fmt(valorTotal), W - ML - 2, y + 29, { align: 'right' });
+
+  y += FOOT_H + 6;
+
+  // ── Rodapé final ────────────────────────────────
+  draw('#000000'); doc.setLineWidth(0.3);
+  doc.line(ML, y, ML + CW, y);
+  y += 6;
+
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(9); color('#000000');
+  doc.text('GRATO PELA PREFERENCIA', ML + 3, y);
+
+  doc.line(W - ML - 50, y + 1, W - ML, y + 1);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
+  doc.text('Visto', W - ML - 52, y, { align: 'right' });
+
+  const nomeArq = `pedido-venda-${numero || 'sem-numero'}-${data.replace(/\//g, '-')}.pdf`;
+  doc.save(nomeArq);
+}
+
 async function toBase64(url) {
   const res  = await fetch(url);
   const blob = await res.blob();

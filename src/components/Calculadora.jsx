@@ -16,6 +16,7 @@ async function buscarProximoNumero() {
 export default function Calculadora({ produtos, produtoInicial, onSalvarHistorico, usuarioId }) {
   const [cliente, setCliente] = useState('');
   const [numero, setNumero]   = useState('');
+  const [observacao, setObservacao] = useState('');
   const [catalogoId, setCatalogoId] = useState('');
   const [produto, setProduto] = useState('');
   const [preco, setPreco]     = useState('');
@@ -90,6 +91,7 @@ export default function Calculadora({ produtos, produtoInicial, onSalvarHistoric
     setResultado(null);
     setItens([]);
     setCliente('');
+    setObservacao('');
     limparForm();
     const n = await buscarProximoNumero();
     setNumero(n);
@@ -101,9 +103,11 @@ export default function Calculadora({ produtos, produtoInicial, onSalvarHistoric
         method: 'POST',
         body: JSON.stringify({
           usuario_id: usuarioId,
-          cliente: dadosOrcamento.cliente,
-          numero: dadosOrcamento.numero,
-          total: dadosOrcamento.total,
+          cliente:    dadosOrcamento.cliente,
+          numero:     dadosOrcamento.numero,
+          total:      dadosOrcamento.total,
+          observacao: dadosOrcamento.observacao,
+          itens:      dadosOrcamento.itens,
         }),
       });
     } catch { /* não bloqueia o fluxo */ }
@@ -116,11 +120,12 @@ export default function Calculadora({ produtos, produtoInicial, onSalvarHistoric
     const todosItens = [...itens, ...(resultado ? [resultado] : [])];
     if (todosItens.length === 0) return;
     const dadosOrcamento = {
-      cliente: cliente.trim() || 'Não informado',
-      numero: numero.trim() || '—',
-      data: new Date().toLocaleDateString('pt-BR'),
-      itens: todosItens,
-      total: todosItens.reduce((s, i) => s + i.total, 0),
+      cliente:    cliente.trim() || 'Não informado',
+      numero:     numero.trim() || '—',
+      data:       new Date().toLocaleDateString('pt-BR'),
+      observacao: observacao.trim() || '',
+      itens:      todosItens,
+      total:      todosItens.reduce((s, i) => s + i.total, 0),
     };
     await gerarPDF(dadosOrcamento);
     await salvarOrcamento(dadosOrcamento);
@@ -130,11 +135,12 @@ export default function Calculadora({ produtos, produtoInicial, onSalvarHistoric
     const todosItens = [...itens, ...(resultado ? [resultado] : [])];
     if (todosItens.length === 0) return;
     const dadosOrcamento = {
-      cliente: cliente.trim() || 'Não informado',
-      numero: numero.trim() || '—',
-      data: new Date().toLocaleDateString('pt-BR'),
-      itens: todosItens,
-      total: todosItens.reduce((s, i) => s + i.total, 0),
+      cliente:    cliente.trim() || 'Não informado',
+      numero:     numero.trim() || '—',
+      data:       new Date().toLocaleDateString('pt-BR'),
+      observacao: observacao.trim() || '',
+      itens:      todosItens,
+      total:      todosItens.reduce((s, i) => s + i.total, 0),
     };
     await salvarOrcamento(dadosOrcamento);
     alert('Orçamento salvo no sistema!');
@@ -169,6 +175,17 @@ export default function Calculadora({ produtos, produtoInicial, onSalvarHistoric
               <label>Nº do orçamento <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--green)', background: 'var(--green-light)', borderRadius: 4, padding: '1px 6px', marginLeft: 4 }}>auto</span></label>
               <input type="text" placeholder="Gerando…" value={numero} readOnly style={{ background: 'var(--gray-50)', color: 'var(--gray-600)', cursor: 'default' }} />
             </div>
+          </div>
+
+          <div className="field" style={{ marginTop: 4 }}>
+            <label>Observação <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--gray-600)' }}>(opcional)</span></label>
+            <textarea
+              placeholder="Ex: Entregar na loja, instalar na fachada, prazo 3 dias…"
+              value={observacao}
+              onChange={e => setObservacao(e.target.value)}
+              rows={4}
+              style={{ resize: 'vertical', minHeight: 96 }}
+            />
           </div>
 
           <div className="section-label">Selecionar do catálogo</div>

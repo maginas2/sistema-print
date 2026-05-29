@@ -8,6 +8,7 @@ import Dashboard from './components/Dashboard';
 import Usuarios from './components/Usuarios';
 import Relatorios from './components/Relatorios';
 import Orcamentos from './components/Orcamentos';
+import PedidoVenda from './components/PedidoVenda';
 import Login from './components/Login';
 import printLogo from './assets/print logo.png';
 
@@ -20,7 +21,8 @@ const ICONS = {
   info: <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>,
   sair:  <svg viewBox="0 0 24 24"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>,
   relat: <svg viewBox="0 0 24 24"><path d="M9 17H7v-3h2v3zm4 0h-2v-7h2v7zm4 0h-2v-5h2v5zm2 2H5V5h14v14zm0-16H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/></svg>,
-  orc:   <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11zM8 15h8v2H8zm0-4h8v2H8zm0-4h5v2H8z"/></svg>,
+  orc:    <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11zM8 15h8v2H8zm0-4h8v2H8zm0-4h5v2H8z"/></svg>,
+  pedido: <svg viewBox="0 0 24 24"><path d="M19.5 3.5L18 2l-1.5 1.5L15 2l-1.5 1.5L12 2l-1.5 1.5L9 2 7.5 3.5 6 2v14H3v3c0 1.66 1.34 3 3 3h12c1.66 0 3-1.34 3-3V2l-1.5 1.5zm-1.5 15c0 .55-.45 1-1 1H6c-.55 0-1-.45-1-1v-1h13v1zm0-3H6V4h12v11zM8 9h8v2H8zm0 4h8v2H8z"/></svg>,
   moon:  <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 0 1-4.4 2.26 5.403 5.403 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1z"/></svg>,
   sun:   <svg viewBox="0 0 24 24"><path d="M12 7a5 5 0 1 0 0 10A5 5 0 0 0 12 7zm0-5a1 1 0 0 1 1 1v2a1 1 0 0 1-2 0V3a1 1 0 0 1 1-1zm0 16a1 1 0 0 1 1 1v2a1 1 0 0 1-2 0v-2a1 1 0 0 1 1-1zm9-9a1 1 0 0 1 0 2h-2a1 1 0 0 1 0-2h2zM5 12a1 1 0 0 1-1 1H2a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1zm11.95-6.364a1 1 0 0 1 0 1.414l-1.414 1.414a1 1 0 1 1-1.414-1.414l1.414-1.414a1 1 0 0 1 1.414 0zM8.464 15.536a1 1 0 0 1 0 1.414L7.05 18.364a1 1 0 1 1-1.414-1.414l1.414-1.414a1 1 0 0 1 1.414 0zm9.9 2.828a1 1 0 0 1-1.414 0l-1.414-1.414a1 1 0 0 1 1.414-1.414l1.414 1.414a1 1 0 0 1 0 1.414zM8.464 8.464a1 1 0 0 1-1.414 0L5.636 7.05A1 1 0 0 1 7.05 5.636l1.414 1.414a1 1 0 0 1 0 1.414z"/></svg>,
 };
@@ -30,8 +32,9 @@ const PAGE_META = {
   calculadora: { title: 'Calculadora de', highlight: 'Preços',   desc: 'Calcule orçamentos por metro quadrado e gere PDFs profissionais.' },
   produtos:    { title: 'Tabela de',      highlight: 'Produtos', desc: 'Gerencie e organize sua tabela de produtos e preços.' },
   usuarios:    { title: 'Cadastro de',    highlight: 'Usuários',   desc: 'Crie e gerencie os acessos ao sistema.' },
-  relatorios:  { title: 'Relatórios de', highlight: 'Orçamentos', desc: 'Analise orçamentos por período, usuário e valor.' },
-  orcamentos:  { title: 'Gestão de',     highlight: 'Orçamentos', desc: 'Visualize, filtre e gerencie todos os orçamentos registrados.' },
+  relatorios:  { title: 'Relatórios de', highlight: 'Orçamentos',     desc: 'Analise orçamentos por período, usuário e valor.' },
+  orcamentos:  { title: 'Gestão de',     highlight: 'Orçamentos',     desc: 'Visualize, filtre e gerencie todos os orçamentos registrados.' },
+  pedido:      { title: 'Pedido de',     highlight: 'Venda',           desc: 'Gere pedidos de venda em PDF a partir de orçamentos existentes.' },
 };
 
 function lerSessao() {
@@ -146,6 +149,12 @@ export default function App() {
             <span className="nav-arrow">{ICONS.arrow}</span>
           </button>
 
+          <button className={`nav-item${aba === 'pedido' ? ' active' : ''}`} onClick={() => setAba('pedido')}>
+            <span className="nav-icon">{ICONS.pedido}</span>
+            <span className="nav-label">Pedido de Venda</span>
+            <span className="nav-arrow">{ICONS.arrow}</span>
+          </button>
+
           <button className={`nav-item${aba === 'relatorios' ? ' active' : ''}`} onClick={() => setAba('relatorios')}>
             <span className="nav-icon">{ICONS.relat}</span>
             <span className="nav-label">Relatórios</span>
@@ -217,6 +226,9 @@ export default function App() {
         </div>
         <div className={`tab-panel${aba === 'relatorios' ? ' active' : ''}`}>
           <Relatorios usuario={usuario} />
+        </div>
+        <div className={`tab-panel${aba === 'pedido' ? ' active' : ''}`}>
+          <PedidoVenda usuario={usuario} />
         </div>
         <div className={`tab-panel${aba === 'usuarios' ? ' active' : ''}`}>
           <Usuarios />

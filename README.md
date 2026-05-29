@@ -26,9 +26,10 @@ O sistema é dividido em **frontend React** e **backend Node.js/Express**, integ
 | Módulo | Descrição |
 |---|---|
 | Visão Geral | Dashboard com estatísticas, histórico recente e atalhos |
-| Calculadora | Cálculo de orçamentos por m², geração de PDF |
+| Calculadora | Cálculo de orçamentos por m², campo de observação, geração de PDF |
 | Produtos | Catálogo de materiais com preços por m² |
 | Orçamentos | Listagem completa com busca, filtros e controle de status |
+| Pedido de Venda | Gera PDF de pedido de venda a partir de orçamentos, com histórico de emissões |
 | Relatórios | Análise por período, usuário e status, exportável em PDF |
 | Usuários | Cadastro e gestão de acessos *(somente admin)* |
 
@@ -101,6 +102,7 @@ CREATE TABLE produtos (
 -- ─────────────────────────────────────────────
 -- 3. Orçamentos
 -- status: 'pendente' (padrão) ou 'concluido'
+-- observacao: campo livre opcional (instruções de entrega, prazo, etc.)
 -- ─────────────────────────────────────────────
 CREATE TABLE orcamentos (
   id         SERIAL        PRIMARY KEY,
@@ -109,6 +111,7 @@ CREATE TABLE orcamentos (
   numero     VARCHAR(50),
   total      NUMERIC(10,2),
   status     VARCHAR(20)   NOT NULL DEFAULT 'pendente',
+  observacao TEXT,
   criado_em  TIMESTAMP     NOT NULL DEFAULT NOW()
 );
 
@@ -126,38 +129,61 @@ CREATE TABLE itens_orcamento (
   quantidade   INTEGER,
   total        NUMERIC(10,2)
 );
+
+-- ─────────────────────────────────────────────
+-- 5. Pedidos de venda emitidos
+-- Cada geração de PDF de pedido de venda grava uma linha aqui
+-- ─────────────────────────────────────────────
+CREATE TABLE pedidos_venda (
+  id               SERIAL        PRIMARY KEY,
+  orcamento_id     INTEGER       REFERENCES orcamentos(id) ON DELETE SET NULL,
+  numero_orcamento VARCHAR(50)   NOT NULL,
+  cliente          VARCHAR(150)  NOT NULL,
+  usuario_id       INTEGER       REFERENCES usuarios(id) ON DELETE SET NULL,
+  vendedor_nome    VARCHAR(100),
+  total_produtos   NUMERIC(10,2) DEFAULT 0,
+  desconto         NUMERIC(10,2) DEFAULT 0,
+  total_final      NUMERIC(10,2) DEFAULT 0,
+  situacao         VARCHAR(200),
+  condicoes        VARCHAR(200),
+  criado_em        TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+);
 ```
 
 **Relacionamentos entre tabelas:**
 
 ```
-┌──────────────┐        ┌───────────────────┐
-│   usuarios   │        │  itens_orcamento  │
-│──────────────│        │───────────────────│
-│ id (PK)      │◄──┐    │ id (PK)           │
-│ nome         │   │    │ orcamento_id (FK) │──┐
-│ email        │   │    │ produto_nome      │  │
-│ senha        │   │    │ preco_m2          │  │
-│ perfil       │   │    │ largura           │  │
-│ criado_em    │   │    │ altura            │  │
-└──────────────┘   │    │ quantidade        │  │
-                   │    │ total             │  │
-┌──────────────┐   │    └───────────────────┘  │
-│   produtos   │   │                           │
-│──────────────│   │    ┌───────────────────┐  │
-│ id (PK)      │   │    │    orcamentos     │◄─┘
-│ nome         │   │    │───────────────────│
-│ preco        │   └────│ usuario_id (FK)   │
+┌──────────────┐        ┌───────────────────┐      ┌──────────────────────┐
+│   usuarios   │        │  itens_orcamento  │      │    pedidos_venda      │
+│──────────────│        │───────────────────│      │──────────────────────│
+│ id (PK)      │◄──┐    │ id (PK)           │      │ id (PK)              │
+│ nome         │   │    │ orcamento_id (FK) │──┐   │ orcamento_id (FK)  ──┼──┐
+│ email        │   │    │ produto_nome      │  │   │ numero_orcamento     │  │
+│ senha        │   │    │ preco_m2          │  │   │ cliente              │  │
+│ perfil       │   │    │ largura           │  │   │ usuario_id (FK)    ──┼──┼──► usuarios.id
+│ criado_em    │   │    │ altura            │  │   │ vendedor_nome        │  │
+└──────────────┘   │    │ quantidade        │  │   │ total_produtos       │  │
+                   │    │ total             │  │   │ desconto             │  │
+┌──────────────┐   │    └───────────────────┘  │   │ total_final          │  │
+│   produtos   │   │                           │   │ situacao             │  │
+│──────────────│   │    ┌───────────────────┐  │   │ condicoes            │  │
+│ id (PK)      │   │    │    orcamentos     │◄─┘   │ criado_em            │  │
+│ nome         │   │    │───────────────────│      └──────────────────────┘  │
+│ preco        │   └────│ usuario_id (FK)   │◄─────────────────────────────┘
 └──────────────┘        │ id (PK)           │
                         │ cliente           │
                         │ numero            │
                         │ total             │
                         │ status            │
+                        │ observacao        │
                         │ criado_em         │
                         └───────────────────┘
 ```
 
-> `orcamentos.usuario_id` → `usuarios.id` · `itens_orcamento.orcamento_id` → `orcamentos.id` (CASCADE DELETE)
+> - `orcamentos.usuario_id` → `usuarios.id`
+> - `itens_orcamento.orcamento_id` → `orcamentos.id` (CASCADE DELETE)
+> - `pedidos_venda.orcamento_id` → `orcamentos.id` (SET NULL ao excluir orçamento)
+> - `pedidos_venda.usuario_id` → `usuarios.id` (SET NULL ao excluir usuário)
 
 ### 3.3 Dados iniciais
 
@@ -293,11 +319,14 @@ Exibe estatísticas gerais, os 6 orçamentos mais recentes e atalhos rápidos pa
 
 1. O **número do orçamento** é gerado automaticamente
 2. Preencha o **nome do cliente**
-3. Selecione um produto do catálogo ou preencha manualmente (nome + preço/m²)
-4. Informe largura, altura e quantidade (aceita vírgula como separador decimal)
-5. Clique em **Calcular** → depois em **Adicionar ao orçamento**
-6. Repita para cada item
-7. Clique em **Salvar no Sistema** para registrar e em **Gerar PDF** para baixar
+3. Preencha o campo **Observação** (opcional) — instruções de entrega, prazo, detalhes extras
+4. Selecione um produto do catálogo ou preencha manualmente (nome + preço/m²)
+5. Informe largura, altura e quantidade (aceita vírgula como separador decimal)
+6. Clique em **Calcular** → depois em **Adicionar ao orçamento**
+7. Repita para cada item
+8. Clique em **Salvar no Sistema** para registrar e em **Gerar PDF** para baixar
+
+> A observação é salva junto com o orçamento no banco e exibida no Pedido de Venda quando o orçamento é selecionado.
 
 ### Produtos
 
@@ -312,6 +341,30 @@ Exibe estatísticas gerais, os 6 orçamentos mais recentes e atalhos rápidos pa
 - Busca por nome de cliente ou número do orçamento
 - Botão **Concluir / Reabrir** para alternar o status de cada orçamento
 - Admin pode excluir orçamentos
+
+### Pedido de Venda
+
+Aba dedicada à emissão de pedidos de venda em PDF a partir de orçamentos existentes.
+
+**Fluxo de uso:**
+
+1. A tela exibe a lista completa de orçamentos (com busca por cliente ou número)
+2. Clique em **Selecionar** no orçamento desejado
+3. O sistema carrega automaticamente: cliente, vendedor, data e todos os itens do orçamento
+4. Se o orçamento tiver **observação**, ela aparece em destaque antes dos itens
+5. Preencha os campos opcionais:
+   - **Situação Atual** — ex: "Entrega direta ao cliente"
+   - **Condições de Pagamento** — ex: "50% entrada + saldo na entrega"
+   - **Desconto (R$)** — abatido do total calculado
+6. Clique em **Gerar Pedido de Venda (PDF)** — o PDF é baixado e a emissão é salva no banco
+
+**Fallback para orçamentos antigos:** orçamentos criados antes da atualização (sem itens salvos individualmente) exibem uma linha "Conforme orçamento nº XXXX" com o total consolidado.
+
+**Histórico de Pedidos Gerados** (card abaixo da lista):
+- Mostra todos os pedidos emitidos com filtro de período (Todos / Este mês / Esta semana / Este ano)
+- Cards de estatísticas: total de pedidos, valor total, ticket médio e maior pedido
+- Tabela: Nº Orçamento · Cliente · Vendedor · Data · Total Final
+- Operadores veem apenas os próprios pedidos; admin vê todos
 
 ### Relatórios
 
@@ -360,12 +413,14 @@ O sistema possui suporte completo a modo escuro, ativado pelo botão na parte in
 | Funcionalidade | Operador | Admin |
 |---|:---:|:---:|
 | Dashboard | ✓ | ✓ |
-| Calculadora | ✓ | ✓ |
+| Calculadora (com observação) | ✓ | ✓ |
 | Produtos (visualizar/editar) | ✓ | ✓ |
 | Produtos (excluir) | — | ✓ |
 | Orçamentos (próprios) | ✓ | — |
 | Orçamentos (todos) | — | ✓ |
 | Orçamentos (excluir) | — | ✓ |
+| Pedido de Venda (próprios) | ✓ | — |
+| Pedido de Venda (todos / histórico global) | — | ✓ |
 | Relatórios (próprios) | ✓ | — |
 | Relatórios (todos os usuários) | — | ✓ |
 | Gestão de Usuários | — | ✓ |
@@ -382,17 +437,19 @@ Sistema Print/
 ├── backend/
 │   ├── src/
 │   │   ├── controllers/
-│   │   │   ├── authController.js       ← login (bcrypt + geração de JWT)
-│   │   │   ├── usuariosController.js   ← CRUD completo de usuários (listar, criar, editar, excluir)
-│   │   │   ├── orcamentosController.js ← listar, salvar, status, próximo número
-│   │   │   └── relatoriosController.js ← filtros por período/usuário/status
+│   │   │   ├── authController.js         ← login (bcrypt + geração de JWT)
+│   │   │   ├── usuariosController.js     ← CRUD completo de usuários (listar, criar, editar, excluir)
+│   │   │   ├── orcamentosController.js   ← listar, salvar (+ observacao + itens), status, próximo número, buscarPorNumero
+│   │   │   ├── relatoriosController.js   ← filtros por período/usuário/status
+│   │   │   └── pedidosVendaController.js ← salvar emissão de PDF + listar com stats por período
 │   │   ├── middleware/
-│   │   │   └── auth.js                 ← verifica JWT em todas as rotas protegidas
+│   │   │   └── auth.js                   ← verifica JWT em todas as rotas protegidas
 │   │   ├── routes/
 │   │   │   ├── auth.js
-│   │   │   ├── usuarios.js             ← GET / POST / PUT /:id / DELETE /:id
-│   │   │   ├── orcamentos.js
-│   │   │   └── relatorios.js
+│   │   │   ├── usuarios.js               ← GET / POST / PUT /:id / DELETE /:id
+│   │   │   ├── orcamentos.js             ← + GET /por-numero/:numero
+│   │   │   ├── relatorios.js
+│   │   │   └── pedidosVenda.js           ← POST / + GET /
 │   │   ├── lib/
 │   │   │   └── supabase.js             ← cliente Supabase (service role)
 │   │   ├── app.js                      ← Express + Helmet + CORS + limite 1mb (sem listen)
@@ -408,9 +465,10 @@ Sistema Print/
 │   ├── components/
 │   │   ├── Login.jsx                   ← tela de autenticação
 │   │   ├── Dashboard.jsx               ← stats + histórico recente + atalhos
-│   │   ├── Calculadora.jsx             ← cálculo por m², salvar no sistema e gerar PDF
+│   │   ├── Calculadora.jsx             ← cálculo por m², campo observação, salvar no sistema e gerar PDF
 │   │   ├── Produtos.jsx                ← catálogo de materiais
 │   │   ├── Orcamentos.jsx              ← listagem, filtros e controle de status
+│   │   ├── PedidoVenda.jsx             ← emissão de pedido de venda em PDF + histórico de emissões
 │   │   ├── Relatorios.jsx              ← relatórios com filtros + PDF integrado
 │   │   └── Usuarios.jsx                ← listagem, cadastro, edição e exclusão (admin)
 │   ├── hooks/
@@ -420,7 +478,7 @@ Sistema Print/
 │   │   └── api.js                      ← cliente HTTP centralizado (URL relativa, JWT, logout em 401)
 │   ├── utils/
 │   │   ├── fmt.js                      ← formatação de valores em R$
-│   │   └── pdf.js                      ← geração de PDFs (orçamento e relatório)
+│   │   └── pdf.js                      ← geração de PDFs (orçamento, relatório e pedido de venda)
 │   ├── App.jsx                         ← estrutura principal, sidebar, rotas e tema
 │   ├── index.css                       ← estilos globais + variáveis de tema claro/escuro
 │   └── main.jsx
@@ -455,3 +513,43 @@ npm run build
 ```
 
 Os arquivos gerados ficam na pasta `dist/`.
+
+---
+
+## 11. Endpoints da API
+
+Todas as rotas (exceto `/api/auth/login`) exigem o header `Authorization: Bearer <token>`.
+
+### Autenticação
+| Método | Rota | Descrição |
+|---|---|---|
+| POST | `/api/auth/login` | Login — retorna token JWT |
+
+### Orçamentos
+| Método | Rota | Descrição |
+|---|---|---|
+| GET | `/api/orcamentos` | Lista orçamentos (admin vê todos, operador vê os próprios) |
+| POST | `/api/orcamentos` | Salva orçamento com itens e observação |
+| GET | `/api/orcamentos/proximo-numero` | Retorna o próximo número sequencial |
+| GET | `/api/orcamentos/por-numero/:numero` | Retorna orçamento completo (com itens) pelo número |
+| PATCH | `/api/orcamentos/:id/status` | Altera status (`pendente` / `concluido`) |
+| DELETE | `/api/orcamentos/:id` | Exclui orçamento e seus itens (CASCADE) |
+
+### Pedidos de Venda
+| Método | Rota | Descrição |
+|---|---|---|
+| POST | `/api/pedidos-venda` | Registra uma emissão de pedido de venda |
+| GET | `/api/pedidos-venda` | Lista emissões com stats por período (admin vê todas) |
+
+### Relatórios
+| Método | Rota | Descrição |
+|---|---|---|
+| GET | `/api/relatorios` | Relatório com filtros de período, usuário e status |
+
+### Usuários
+| Método | Rota | Descrição |
+|---|---|---|
+| GET | `/api/usuarios` | Lista todos os usuários |
+| POST | `/api/usuarios` | Cadastra novo usuário |
+| PUT | `/api/usuarios/:id` | Edita usuário |
+| DELETE | `/api/usuarios/:id` | Exclui usuário |
