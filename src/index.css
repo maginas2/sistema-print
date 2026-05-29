@@ -654,8 +654,8 @@ input.has-eye { padding-right: 42px !important; padding-left: 14px; }
 
 /* ─── Orçamentos page ────────────────────── */
 .orc-toolbar {
-  display: flex; flex-direction: column; gap: 16px;
-  padding: 20px 28px 0;
+  display: flex; flex-direction: column; gap: 14px;
+  padding: 16px 28px 16px;
   border-bottom: 1.5px solid var(--gray-200);
 }
 
@@ -666,14 +666,14 @@ input.has-eye { padding-right: 42px !important; padding-left: 14px; }
   width: 18px; height: 18px; fill: var(--gray-400);
   position: absolute; left: 14px; pointer-events: none; flex-shrink: 0;
 }
-.orc-search-input {
+input.orc-search-input {
   width: 100%; height: 46px; padding: 0 40px 0 44px;
   border: 2px solid var(--gray-200); border-radius: var(--radius);
   font-family: inherit; font-size: 14px; font-weight: 500;
   color: var(--gray-800); background: var(--gray-50);
   outline: none; transition: border-color .2s, box-shadow .2s;
 }
-.orc-search-input:focus { border-color: var(--blue); background: var(--card-bg); box-shadow: 0 0 0 3px rgba(26,86,219,.12); }
+input.orc-search-input:focus { border-color: var(--blue); background: var(--card-bg); box-shadow: 0 0 0 3px rgba(26,86,219,.12); }
 .orc-search-clear { position: absolute; right: 12px; background: none; border: none; cursor: pointer; color: var(--gray-400); font-size: 14px; padding: 0 4px; }
 .orc-search-clear:hover { color: var(--gray-600); }
 
@@ -696,17 +696,20 @@ input.has-eye { padding-right: 42px !important; padding-left: 14px; }
 .orc-tab.active .orc-tab-count { background: var(--blue-light); color: var(--blue); }
 
 /* Table */
-.orc-table-wrap { border-top: 1.5px solid var(--gray-200); }
-
+.orc-table-wrap {
+  border-top: 1.5px solid var(--gray-200);
+  display: grid;
+  grid-template-columns: 72px 1fr 86px 96px 78px 110px 200px;
+}
+.orc-table-wrap.orc-admin {
+  grid-template-columns: 72px 1fr 108px 86px 96px 78px 110px 238px;
+}
 .orc-table-wrap .orc-thead,
 .orc-table-wrap .orc-row {
   display: grid;
-  grid-template-columns: 78px 1fr 92px 112px 100px 130px;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
   align-items: center;
-}
-.orc-table-wrap.orc-admin .orc-thead,
-.orc-table-wrap.orc-admin .orc-row {
-  grid-template-columns: 78px 1fr 130px 92px 112px 100px 140px;
 }
 
 .orc-thead {
@@ -728,7 +731,7 @@ input.has-eye { padding-right: 42px !important; padding-left: 14px; }
 .orc-cliente   { font-size: 14px; font-weight: 600; color: var(--gray-800); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 12px; }
 .orc-feito-por { font-size: 13px; font-weight: 500; color: var(--gray-600); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 8px; }
 .orc-data      { font-size: 13px; color: var(--gray-500); }
-.orc-total     { font-size: 14px; font-weight: 700; color: var(--blue); text-align: right; }
+.orc-total     { font-size: 14px; font-weight: 700; color: var(--blue); text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .orc-align-right  { text-align: right; }
 .orc-align-center { text-align: center; }
 
@@ -770,7 +773,7 @@ input[type="date"]:focus { border-color: var(--blue); background: var(--card-bg)
 
 /* ── Botões de toggle de status ──────────── */
 .btn-status-toggle {
-  height: 28px; padding: 0 12px;
+  height: 26px; padding: 0 10px;
   border-radius: 6px; border: none;
   font-family: inherit; font-size: 11px; font-weight: 700;
   cursor: pointer; white-space: nowrap;
@@ -781,9 +784,11 @@ input[type="date"]:focus { border-color: var(--blue); background: var(--card-bg)
 .btn-toggle-concluir:hover { background: #A7F3D0; }
 .btn-toggle-reabrir  { background: var(--gray-100); color: var(--gray-600); border: 1px solid var(--gray-200); }
 .btn-toggle-reabrir:hover  { background: var(--gray-200); }
-.orc-acoes { display: flex; align-items: center; gap: 6px; justify-content: center; }
-.btn-excluir-orc { width: 28px; height: 28px; border-radius: 6px; border: none; background: #FEE2E2; color: #DC2626; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background .2s, transform .1s; }
-.btn-excluir-orc svg { width: 15px; height: 15px; fill: currentColor; }
+.orc-acoes { display: flex; align-items: center; gap: 6px; justify-content: flex-end; padding-right: 2px; overflow: hidden; }
+.orc-acoes .btn-status-toggle { margin-right: 2px; flex-shrink: 0; }
+.orc-acoes .btn-excluir-orc { flex-shrink: 0; }
+.btn-excluir-orc { width: 26px; height: 26px; border-radius: 6px; border: none; background: #FEE2E2; color: #DC2626; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background .2s, transform .1s; }
+.btn-excluir-orc svg { width: 14px; height: 14px; fill: currentColor; }
 .btn-excluir-orc:hover { background: #FECACA; }
 .btn-excluir-orc:active { transform: scale(.95); }
 
@@ -837,7 +842,7 @@ input[type="date"]:focus { border-color: var(--blue); background: var(--card-bg)
 [data-theme="dark"] input, [data-theme="dark"] select { background: #0F172A; color: var(--gray-800); border-color: var(--gray-200); }
 [data-theme="dark"] input::placeholder { color: var(--gray-400); }
 [data-theme="dark"] .orc-toolbar { border-bottom-color: var(--gray-200); }
-[data-theme="dark"] .orc-search-input { background: var(--gray-50); color: var(--gray-800); border-color: var(--gray-200); }
+[data-theme="dark"] input.orc-search-input { background: var(--gray-50); color: var(--gray-800); border-color: var(--gray-200); }
 [data-theme="dark"] .orc-tab { color: var(--gray-400); }
 [data-theme="dark"] .orc-tab:hover { color: var(--gray-600); }
 [data-theme="dark"] .orc-tab-count { background: var(--gray-200); color: var(--gray-600); }

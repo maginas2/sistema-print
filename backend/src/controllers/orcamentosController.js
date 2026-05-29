@@ -8,7 +8,7 @@ export async function listar(req, res) {
 
   let query = supabase
     .from('orcamentos')
-    .select('id, cliente, numero, total, criado_em, status, usuarios(nome)')
+    .select('id, cliente, numero, total, criado_em, status, usuarios(nome), itens_orcamento(largura, altura)')
     .order('criado_em', { ascending: false })
     .limit(200);
 
@@ -111,6 +111,55 @@ export async function excluir(req, res) {
 
   if (error) return res.status(500).json({ erro: 'Erro ao excluir orçamento.' });
   return res.json({ ok: true });
+}
+
+export async function atualizar(req, res) {
+  const { id } = req.params;
+  const { cliente, observacao, itens } = req.body;
+
+  if (!id || typeof id !== 'string' || id.length > 50) {
+    return res.status(400).json({ erro: 'ID inválido.' });
+  }
+  if (!cliente || typeof cliente !== 'string' || cliente.trim().length > 200) {
+    return res.status(400).json({ erro: 'Cliente inválido.' });
+  }
+
+  const novoTotal = Array.isArray(itens) && itens.length > 0
+    ? itens.reduce((s, i) => s + (parseFloat(i.total) || 0), 0)
+    : null;
+
+  const updateObj = {
+    cliente:    cliente.trim(),
+    observacao: observacao ? String(observacao).slice(0, 1000) : null,
+  };
+  if (novoTotal !== null) updateObj.total = novoTotal;
+
+  const { data, error } = await supabase
+    .from('orcamentos')
+    .update(updateObj)
+    .eq('id', id)
+    .select('id, numero, cliente, total, status')
+    .single();
+
+  if (error) return res.status(500).json({ erro: 'Erro ao atualizar orçamento.' });
+
+  if (Array.isArray(itens)) {
+    await supabase.from('itens_orcamento').delete().eq('orcamento_id', id);
+    if (itens.length > 0) {
+      const registros = itens.map(item => ({
+        orcamento_id: parseInt(id),
+        produto_nome: String(item.produto_nome || item.produto || '').slice(0, 300),
+        preco_m2:    parseFloat(item.preco_m2 || item.preco || 0) || 0,
+        largura:     parseFloat(item.largura)  || 0,
+        altura:      parseFloat(item.altura)   || 0,
+        quantidade:  parseInt(item.quantidade) || 1,
+        total:       parseFloat(item.total)    || 0,
+      }));
+      await supabase.from('itens_orcamento').insert(registros);
+    }
+  }
+
+  return res.json({ orcamento: data });
 }
 
 export async function atualizarStatus(req, res) {

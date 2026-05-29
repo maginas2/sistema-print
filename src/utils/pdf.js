@@ -541,10 +541,11 @@ export async function gerarPDF({ cliente, numero, data, itens }) {
     doc.setFont('helvetica', 'bold'); doc.setFontSize(10); color('#000000');
     doc.text(String(idx + 1).padStart(2, '0'), C.item.x + C.item.w / 2, ty, { align: 'center' });
 
-    // DESCRIÇÃO  (nome + dimensões)
-    const largStr = item.largura.toLocaleString('pt-BR', { maximumFractionDigits: 2 });
-    const altStr  = item.altura.toLocaleString('pt-BR',  { maximumFractionDigits: 2 });
-    const desc    = `${item.produto} ${largStr}×${altStr}`;
+    // DESCRIÇÃO  (nome + dimensões ou só nome para serviços)
+    const temMedidas = item.area > 0 || (item.largura > 0 && item.altura > 0);
+    const desc = temMedidas
+      ? `${item.produto} ${item.largura.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}×${item.altura.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}`
+      : item.produto;
     const descMax = doc.splitTextToSize(desc, C.desc.w - 5)[0]; // 1ª linha
     doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); color('#000000');
     doc.text(descMax, C.desc.x + 3, ty);

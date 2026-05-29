@@ -17,12 +17,17 @@ export default function Calculadora({ produtos, produtoInicial, onSalvarHistoric
   const [cliente, setCliente] = useState('');
   const [numero, setNumero]   = useState('');
   const [observacao, setObservacao] = useState('');
+  const [modo,      setModo]        = useState('m2'); // 'm2' | 'servico'
   const [catalogoId, setCatalogoId] = useState('');
   const [produto, setProduto] = useState('');
   const [preco, setPreco]     = useState('');
   const [largura, setLargura] = useState('');
   const [altura, setAltura]   = useState('');
   const [quantidade, setQuantidade] = useState('1');
+  // campos exclusivos do modo serviço
+  const [nomeServico,  setNomeServico]  = useState('');
+  const [precoServico, setPrecoServico] = useState('');
+  const [qtdServico,   setQtdServico]   = useState('1');
   const [resultado, setResultado]   = useState(null);
   const [itens, setItens]           = useState([]);
 
@@ -80,6 +85,16 @@ export default function Calculadora({ produtos, produtoInicial, onSalvarHistoric
   function limparForm() {
     setProduto(''); setPreco(''); setLargura(''); setAltura('');
     setQuantidade('1'); setCatalogoId('');
+    setNomeServico(''); setPrecoServico(''); setQtdServico('1');
+  }
+
+  function calcularServico() {
+    const toNum = v => parseFloat(String(v).replace(',', '.').replace(/\.$/, '')) || 0;
+    if (!nomeServico.trim())   { alert('Informe o nome do serviço.'); return; }
+    if (toNum(precoServico) <= 0) { alert('Informe o preço maior que zero.'); return; }
+    const p = toNum(precoServico);
+    const q = parseInt(qtdServico) || 1;
+    setResultado({ produto: nomeServico.trim(), preco: p, largura: 0, altura: 0, quantidade: q, area: 0, valorUnit: p, total: p * q, tipo: 'servico' });
   }
 
   function novoCalculo() {
@@ -188,6 +203,28 @@ export default function Calculadora({ produtos, produtoInicial, onSalvarHistoric
             />
           </div>
 
+          {/* ── Toggle de modo ─────────────────── */}
+          <div style={{ display: 'flex', gap: 8, margin: '4px 0 8px' }}>
+            <button
+              type="button"
+              onClick={() => { setModo('m2'); setResultado(null); limparForm(); }}
+              className={modo === 'm2' ? 'btn-primary' : 'btn-limpar-hist'}
+              style={{ flex: 1, height: 40, fontSize: 13, borderRadius: 10 }}
+            >
+              <svg viewBox="0 0 24 24" style={{ width: 15, height: 15, fill: 'currentColor', marginRight: 6, verticalAlign: 'middle' }}><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+              Cálculo por m²
+            </button>
+            <button
+              type="button"
+              onClick={() => { setModo('servico'); setResultado(null); limparForm(); }}
+              className={modo === 'servico' ? 'btn-primary' : 'btn-limpar-hist'}
+              style={{ flex: 1, height: 40, fontSize: 13, borderRadius: 10 }}
+            >
+              <svg viewBox="0 0 24 24" style={{ width: 15, height: 15, fill: 'currentColor', marginRight: 6, verticalAlign: 'middle' }}><path d="M22 9V7h-2V5c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-2h2v-2h-2v-2h2v-2h-2V9h2zm-4 10H4V5h14v14z"/></svg>
+              Serviço Fixo
+            </button>
+          </div>
+
           <div className="section-label">Selecionar do catálogo</div>
           <div className="catalog-select-wrap">
             <div className="catalog-hint">
@@ -202,65 +239,97 @@ export default function Calculadora({ produtos, produtoInicial, onSalvarHistoric
             </select>
           </div>
 
-          <div className="section-label">Material e preço</div>
-          <div className="grid-2">
-            <div className="field">
-              <label>Nome do produto / material<span className="req">*</span></label>
-              <input type="text" placeholder="Ex: Lona Fosca, Adesivo Vinil…" value={produto} onChange={e => setProduto(e.target.value)} onKeyDown={handleKeyDown} />
-            </div>
-            <div className="field">
-              <label>Preço por m²<span className="req">*</span></label>
-              <div className="input-wrap">
-                <span className="input-prefix">R$</span>
-                <input type="text" inputMode="decimal" className="has-prefix" placeholder="0,00" value={preco} onChange={e => setPreco(e.target.value)} onKeyDown={handleKeyDown} />
+          {modo === 'm2' ? (<>
+            <div className="section-label">Material e preço</div>
+            <div className="grid-2">
+              <div className="field">
+                <label>Nome do produto / material<span className="req">*</span></label>
+                <input type="text" placeholder="Ex: Lona Fosca, Adesivo Vinil…" value={produto} onChange={e => setProduto(e.target.value)} onKeyDown={handleKeyDown} />
+              </div>
+              <div className="field">
+                <label>Preço por m²<span className="req">*</span></label>
+                <div className="input-wrap">
+                  <span className="input-prefix">R$</span>
+                  <input type="text" inputMode="decimal" className="has-prefix" placeholder="0,00" value={preco} onChange={e => setPreco(e.target.value)} onKeyDown={handleKeyDown} />
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="section-label">Dimensões e quantidade</div>
-          <div className="grid-4">
-            <div className="field">
-              <label>Largura<span className="req">*</span></label>
-              <div className="input-wrap">
-                <input type="text" inputMode="decimal" className="has-suffix" placeholder="0,00" value={largura} onChange={e => setLargura(e.target.value)} onKeyDown={handleKeyDown} />
-                <span className="input-suffix">m</span>
+            <div className="section-label">Dimensões e quantidade</div>
+            <div className="grid-4">
+              <div className="field">
+                <label>Largura<span className="req">*</span></label>
+                <div className="input-wrap">
+                  <input type="text" inputMode="decimal" className="has-suffix" placeholder="0,00" value={largura} onChange={e => setLargura(e.target.value)} onKeyDown={handleKeyDown} />
+                  <span className="input-suffix">m</span>
+                </div>
+              </div>
+              <div className="field">
+                <label>Altura<span className="req">*</span></label>
+                <div className="input-wrap">
+                  <input type="text" inputMode="decimal" className="has-suffix" placeholder="0,00" value={altura} onChange={e => setAltura(e.target.value)} onKeyDown={handleKeyDown} />
+                  <span className="input-suffix">m</span>
+                </div>
+              </div>
+              <div className="field">
+                <label>Quantidade</label>
+                <input type="number" className="plain" min="1" step="1" value={quantidade} onChange={e => setQuantidade(e.target.value)} onKeyDown={handleKeyDown} />
+              </div>
+              <div className="field" style={{ justifyContent: 'flex-end' }}>
+                <label style={{ opacity: 0 }}>.</label>
+                <button className="btn-primary" style={{ height: 48, fontSize: 14 }} onClick={calcular}>
+                  <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+                  Calcular
+                </button>
               </div>
             </div>
-            <div className="field">
-              <label>Altura<span className="req">*</span></label>
-              <div className="input-wrap">
-                <input type="text" inputMode="decimal" className="has-suffix" placeholder="0,00" value={altura} onChange={e => setAltura(e.target.value)} onKeyDown={handleKeyDown} />
-                <span className="input-suffix">m</span>
+          </>) : (<>
+            <div className="section-label">Serviço e valor</div>
+            <div className="grid-2">
+              <div className="field">
+                <label>Nome do serviço<span className="req">*</span></label>
+                <input type="text" placeholder="Ex: Colar adesivo em carro, Troca de lona…" value={nomeServico} onChange={e => setNomeServico(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') calcularServico(); }} />
+              </div>
+              <div className="field">
+                <label>Preço do serviço<span className="req">*</span></label>
+                <div className="input-wrap">
+                  <span className="input-prefix">R$</span>
+                  <input type="text" inputMode="decimal" className="has-prefix" placeholder="0,00" value={precoServico} onChange={e => setPrecoServico(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') calcularServico(); }} />
+                </div>
               </div>
             </div>
-            <div className="field">
-              <label>Quantidade</label>
-              <input type="number" className="plain" min="1" step="1" value={quantidade} onChange={e => setQuantidade(e.target.value)} onKeyDown={handleKeyDown} />
+            <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 16, alignItems: 'end' }}>
+              <div className="field">
+                <label>Quantidade</label>
+                <input type="number" className="plain" min="1" step="1" value={qtdServico} onChange={e => setQtdServico(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') calcularServico(); }} />
+              </div>
+              <div className="field">
+                <label style={{ opacity: 0 }}>.</label>
+                <button className="btn-primary" style={{ height: 48, fontSize: 14 }} onClick={calcularServico}>
+                  <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                  Calcular serviço
+                </button>
+              </div>
             </div>
-            <div className="field" style={{ justifyContent: 'flex-end' }}>
-              <label style={{ opacity: 0 }}>.</label>
-              <button className="btn-primary" style={{ height: 48, fontSize: 14 }} onClick={calcular}>
-                <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
-                Calcular
-              </button>
-            </div>
-          </div>
+          </>)}
 
           {resultado && (
             <div className="result">
               <div className="result-header">
                 <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
-                <span>Cálculo concluído</span>
+                <span>{resultado.tipo === 'servico' ? 'Serviço calculado' : 'Cálculo concluído'}</span>
               </div>
               <div className="result-grid">
                 <div className="result-item">
-                  <div className="r-label">Produto</div>
+                  <div className="r-label">{resultado.tipo === 'servico' ? 'Serviço' : 'Produto'}</div>
                   <div className="r-value" style={{ fontSize: 13, lineHeight: 1.3 }}>{resultado.produto}</div>
                 </div>
-                <div className="result-item">
-                  <div className="r-label">Área (m²)</div>
-                  <div className="r-value">{resultado.area.toLocaleString('pt-BR', { maximumFractionDigits: 4 })} m²</div>
-                </div>
+                {resultado.tipo !== 'servico' && (
+                  <div className="result-item">
+                    <div className="r-label">Área (m²)</div>
+                    <div className="r-value">{resultado.area.toLocaleString('pt-BR', { maximumFractionDigits: 4 })} m²</div>
+                  </div>
+                )}
                 <div className="result-item">
                   <div className="r-label">Qtd × Unitário</div>
                   <div className="r-value" style={{ fontSize: 13 }}>{resultado.quantidade}× {fmt(resultado.valorUnit)}</div>
@@ -306,9 +375,18 @@ export default function Calculadora({ produtos, produtoInicial, onSalvarHistoric
                 <div key={item.id} className="orcamento-item">
                   <div className="oi-num">{idx + 1}</div>
                   <div className="oi-info">
-                    <div className="oi-nome">{item.produto}</div>
+                    <div className="oi-nome" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      {item.produto}
+                      {item.tipo === 'servico'
+                        ? <span style={{ fontSize: 10, fontWeight: 700, background: 'var(--blue-light)', color: 'var(--blue)', borderRadius: 4, padding: '1px 6px', letterSpacing: .3 }}>SERVIÇO</span>
+                        : <span style={{ fontSize: 10, fontWeight: 700, background: 'var(--green-light)', color: 'var(--green)', borderRadius: 4, padding: '1px 6px', letterSpacing: .3 }}>M²</span>
+                      }
+                    </div>
                     <div className="oi-det">
-                      {item.largura}m × {item.altura}m &nbsp;·&nbsp; {item.quantidade} un. &nbsp;·&nbsp; {fmt(item.preco)}/m²
+                      {item.tipo === 'servico'
+                        ? <>{item.quantidade} un. &nbsp;·&nbsp; {fmt(item.valorUnit)}/un.</>
+                        : <>{item.largura}m × {item.altura}m &nbsp;·&nbsp; {item.quantidade} un. &nbsp;·&nbsp; {fmt(item.preco)}/m²</>
+                      }
                     </div>
                   </div>
                   <div className="oi-total">{fmt(item.total)}</div>

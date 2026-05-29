@@ -3,6 +3,84 @@ import { apiFetch } from '../lib/api.js';
 import { fmt } from '../utils/fmt';
 import { gerarPedidoVendaPDF } from '../utils/pdf';
 
+const PERIODOS_PV = [
+  { v: 'todos',   l: 'Tudo'   },
+  { v: 'diario',  l: 'Hoje'   },
+  { v: 'semanal', l: 'Semana' },
+  { v: 'mensal',  l: 'Mês'    },
+  { v: 'anual',   l: 'Ano'    },
+];
+
+function filtrarPorPeriodoPV(registros, periodo) {
+  if (periodo === 'todos') return registros;
+  const agora = new Date();
+  let inicio;
+  if (periodo === 'diario')       { inicio = new Date(agora); inicio.setHours(0,0,0,0); }
+  else if (periodo === 'semanal') { inicio = new Date(agora); inicio.setDate(agora.getDate()-6); inicio.setHours(0,0,0,0); }
+  else if (periodo === 'mensal')  { inicio = new Date(agora.getFullYear(), agora.getMonth(), 1); }
+  else if (periodo === 'anual')   { inicio = new Date(agora.getFullYear(), 0, 1); }
+  return registros.filter(o => o.criado_em && new Date(o.criado_em) >= inicio);
+}
+
+const PV_COLS = '64px 1fr 130px 90px 112px 110px 130px';
+const HC_COLS  = '80px 1fr 150px 90px 120px';
+const HDR_SPAN = { fontSize:11, fontWeight:700, color:'var(--gray-400)', textTransform:'uppercase', letterSpacing:.6 };
+
+function PVListTable({ filtrados, buscandoDet, selecionar, fmt }) {
+  const hdr = { display:'grid', gridTemplateColumns:PV_COLS, columnGap:8, padding:'10px 24px', background:'var(--gray-50)', borderBottom:'1.5px solid var(--gray-200)', alignItems:'center' };
+  const row = { display:'grid', gridTemplateColumns:PV_COLS, columnGap:8, padding:'13px 24px', borderBottom:'1px solid var(--gray-100)', alignItems:'center', transition:'background .12s' };
+  return (
+    <div style={{ borderTop:'1.5px solid var(--gray-200)' }}>
+      <div style={hdr}>
+        {[['Nº','left'],['Cliente','left'],['Feito por','left'],['Data','left'],['Status','left'],['Total','right'],['Ação','center']].map(([h,a]) => (
+          <span key={h} style={{ ...HDR_SPAN, textAlign:a }}>{h}</span>
+        ))}
+      </div>
+      {filtrados.map(o => {
+        const dataStr = o.criado_em ? new Date(o.criado_em).toLocaleDateString('pt-BR') : (o.data || '—');
+        return (
+          <div key={o.id} style={row} onMouseEnter={e=>e.currentTarget.style.background='var(--gray-50)'} onMouseLeave={e=>e.currentTarget.style.background=''}>
+            <span className="orc-num">#{o.numero}</span>
+            <span className="orc-cliente">{o.cliente}</span>
+            <span className="orc-feito-por">{o.usuarios?.nome || o.usuario_nome || '—'}</span>
+            <span className="orc-data">{dataStr}</span>
+            <span><span className={`status-badge status-${o.status||'pendente'}`}>{o.status==='concluido'?'✓ Concluído':'● Pendente'}</span></span>
+            <span className="orc-total">{fmt(parseFloat(o.total)||0)}</span>
+            <span style={{ display:'flex', justifyContent:'center' }}>
+              <button className="btn-primary" style={{ height:28, padding:'0 14px', fontSize:12, borderRadius:7 }} onClick={()=>selecionar(o)} disabled={buscandoDet}>
+                {buscandoDet?'…':'Selecionar'}
+              </button>
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function PVHistTable({ historico, fmt }) {
+  const hdr = { display:'grid', gridTemplateColumns:HC_COLS, padding:'10px 24px', background:'var(--gray-50)', borderBottom:'1.5px solid var(--gray-200)', alignItems:'center' };
+  const row = { display:'grid', gridTemplateColumns:HC_COLS, padding:'13px 24px', borderBottom:'1px solid var(--gray-100)', alignItems:'center' };
+  return (
+    <div style={{ borderTop:'1.5px solid var(--gray-200)' }}>
+      <div style={hdr}>
+        {['Nº Orç.','Cliente','Vendedor','Data','Total Final'].map((h,i) => (
+          <span key={h} style={{ ...HDR_SPAN, textAlign: i===4?'right':'left' }}>{h}</span>
+        ))}
+      </div>
+      {historico.map(p => (
+        <div key={p.id} style={row}>
+          <span className="orc-num">{p.numero_orcamento}</span>
+          <span className="orc-cliente">{p.cliente}</span>
+          <span className="orc-feito-por">{p.vendedor_nome || '—'}</span>
+          <span className="orc-data">{p.criado_em ? new Date(p.criado_em).toLocaleDateString('pt-BR') : '—'}</span>
+          <span className="orc-total">{fmt(parseFloat(p.total_final)||0)}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 const PERIODOS = [
   { v: 'todos',   l: 'Todos' },
   { v: 'mensal',  l: 'Este mês' },
@@ -20,7 +98,9 @@ export default function PedidoVenda({ usuario }) {
   const [condicoes,   setCondicoes]   = useState('');
   const [desconto,    setDesconto]    = useState('');
   const [gerando,     setGerando]     = useState(false);
-  const [busca,       setBusca]       = useState('');
+  const [busca,          setBusca]          = useState('');
+  const [periodoLista,   setPeriodoLista]   = useState('todos');
+  const [statusLista,    setStatusLista]    = useState('todos');
 
   const [historico,         setHistorico]         = useState([]);
   const [statsHist,         setStatsHist]         = useState(null);
@@ -122,11 +202,13 @@ export default function PedidoVenda({ usuario }) {
     : (parseFloat(selecionado?.total) || 0);
   const valorTotal = valorProdutos - descNum;
 
-  const filtrados = orcamentos.filter(o => {
-    if (!busca.trim()) return true;
-    const q = busca.toLowerCase();
-    return o.cliente?.toLowerCase().includes(q) || o.numero?.toLowerCase().includes(q);
-  });
+  const filtrados = filtrarPorPeriodoPV(orcamentos, periodoLista)
+    .filter(o => statusLista === 'todos' || o.status === statusLista)
+    .filter(o => {
+      if (!busca.trim()) return true;
+      const q = busca.toLowerCase();
+      return o.cliente?.toLowerCase().includes(q) || o.numero?.toLowerCase().includes(q);
+    });
 
   /* ── LISTA ─────────────────────────────────────── */
   if (!selecionado) {
@@ -154,81 +236,68 @@ export default function PedidoVenda({ usuario }) {
           </button>
         </div>
 
-        <div className="card-body" style={{ padding: 0 }}>
-          <div className="orc-toolbar" style={{ borderTop: 'none' }}>
-            <div className="orc-search-wrap">
-              <svg viewBox="0 0 24 24" className="orc-search-icon">
-                <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
-              </svg>
-              <input
-                type="text"
-                className="orc-search-input"
-                placeholder="Filtrar por cliente ou nº do orçamento…"
-                value={busca}
-                onChange={e => setBusca(e.target.value)}
-              />
-              {busca && (
-                <button className="orc-search-clear" onClick={() => setBusca('')}>✕</button>
-              )}
-            </div>
+        <div className="orc-toolbar">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray-400)', textTransform: 'uppercase', letterSpacing: .6, marginRight: 4 }}>Período:</span>
+            {PERIODOS_PV.map(p => (
+              <button key={p.v} className={`period-tab${periodoLista === p.v ? ' active' : ''}`} onClick={() => setPeriodoLista(p.v)}>{p.l}</button>
+            ))}
+            <span style={{ width: 1, height: 20, background: 'var(--gray-200)', margin: '0 6px', display: 'inline-block' }} />
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray-400)', textTransform: 'uppercase', letterSpacing: .6, marginRight: 4 }}>Status:</span>
+            {[
+              { v: 'todos',    l: 'Todos' },
+              { v: 'pendente', l: '● Pendente' },
+              { v: 'concluido',l: '✓ Concluído' },
+            ].map(s => (
+              <button
+                key={s.v}
+                className={`period-tab${statusLista === s.v ? ' active' : ''}`}
+                onClick={() => setStatusLista(s.v)}
+                style={
+                  statusLista !== s.v && s.v === 'pendente'  ? { color: 'var(--yellow-dark)', borderColor: 'var(--yellow-dark)' } :
+                  statusLista !== s.v && s.v === 'concluido' ? { color: 'var(--green)',       borderColor: 'var(--green)'       } : {}
+                }
+              >{s.l}</button>
+            ))}
           </div>
-
-          {erroDet && (
-            <div style={{ padding: '10px 20px', color: 'var(--red, #dc2626)', fontWeight: 500, fontSize: 13 }}>
-              {erroDet}
-            </div>
-          )}
-
-          {filtrados.length === 0 && !carregando ? (
-            <div className="empty-state">
-              <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg>
-              <p>Nenhum orçamento encontrado.</p>
-            </div>
-          ) : (
-            <div className="hist-wrap hist-status-admin">
-              <div className="hist-header">
-                <span>Nº</span>
-                <span>Cliente</span>
-                <span>Feito por</span>
-                <span>Data</span>
-                <span>Status</span>
-                <span style={{ textAlign: 'right' }}>Total</span>
-                <span style={{ textAlign: 'center' }}>Ação</span>
-              </div>
-              {filtrados.map(o => {
-                const dataStr = o.criado_em
-                  ? new Date(o.criado_em).toLocaleDateString('pt-BR')
-                  : (o.data || '—');
-                return (
-                  <div key={o.id} className="hist-row">
-                    <span className="hist-num">{o.numero}</span>
-                    <span className="hist-cliente">{o.cliente}</span>
-                    <span className="hist-data" style={{ fontWeight: 600 }}>
-                      {o.usuarios?.nome || o.usuario_nome || '—'}
-                    </span>
-                    <span className="hist-data">{dataStr}</span>
-                    <span>
-                      <span className={`status-badge status-${o.status || 'pendente'}`}>
-                        {o.status === 'concluido' ? '✓ Concluído' : '● Pendente'}
-                      </span>
-                    </span>
-                    <span className="hist-total">{fmt(parseFloat(o.total) || 0)}</span>
-                    <span style={{ textAlign: 'center' }}>
-                      <button
-                        className="btn-primary"
-                        style={{ padding: '4px 14px', fontSize: 13 }}
-                        onClick={() => selecionar(o)}
-                        disabled={buscandoDet}
-                      >
-                        {buscandoDet ? '…' : 'Selecionar'}
-                      </button>
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          <div className="orc-search-wrap">
+            <svg viewBox="0 0 24 24" className="orc-search-icon">
+              <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+            </svg>
+            <input
+              type="text"
+              className="orc-search-input"
+              placeholder="Filtrar por cliente ou nº do orçamento…"
+              value={busca}
+              onChange={e => setBusca(e.target.value)}
+            />
+            {busca && (
+              <button className="orc-search-clear" onClick={() => setBusca('')}>✕</button>
+            )}
+          </div>
         </div>
+
+        {erroDet && (
+          <div style={{ padding: '10px 24px', color: 'var(--red, #dc2626)', fontWeight: 500, fontSize: 13 }}>
+            {erroDet}
+          </div>
+        )}
+
+        {filtrados.length === 0 && !carregando ? (
+          <div className="empty-state">
+            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg>
+            <p>Nenhum orçamento encontrado.</p>
+          </div>
+        ) : (
+          <PVListTable filtrados={filtrados} buscandoDet={buscandoDet} selecionar={selecionar} fmt={fmt} />
+        )}
+
+        {filtrados.length > 0 && (
+          <div className="orc-footer">
+            {filtrados.length} orçamento{filtrados.length !== 1 ? 's' : ''}
+            {busca && <> para "<strong>{busca}</strong>"</>}
+          </div>
+        )}
       </div>
 
       {/* ── Histórico de Pedidos Gerados ─────────── */}
@@ -256,57 +325,36 @@ export default function PedidoVenda({ usuario }) {
         </div>
 
         {statsHist && (
-          <div className="dash-stats" style={{ padding: '12px 20px 0' }}>
+          <div className="dash-stats" style={{ padding: '16px 20px 4px' }}>
             <div className="dash-stat">
-              <div className="stat-value">{statsHist.total_pedidos}</div>
-              <div className="stat-label">Pedidos gerados</div>
+              <div className="dash-stat-label">Pedidos gerados</div>
+              <div className="dash-stat-value">{statsHist.total_pedidos}</div>
             </div>
             <div className="dash-stat">
-              <div className="stat-value">{fmt(statsHist.valor_total)}</div>
-              <div className="stat-label">Valor total</div>
+              <div className="dash-stat-label">Valor total</div>
+              <div className="dash-stat-value" style={{ fontSize: statsHist.valor_total >= 10000 ? 20 : 28 }}>{fmt(statsHist.valor_total)}</div>
             </div>
             <div className="dash-stat">
-              <div className="stat-value">{fmt(statsHist.ticket_medio)}</div>
-              <div className="stat-label">Ticket médio</div>
+              <div className="dash-stat-label">Ticket médio</div>
+              <div className="dash-stat-value" style={{ fontSize: statsHist.ticket_medio >= 10000 ? 20 : 28 }}>{fmt(statsHist.ticket_medio)}</div>
             </div>
             <div className="dash-stat">
-              <div className="stat-value">{fmt(statsHist.maior_pedido)}</div>
-              <div className="stat-label">Maior pedido</div>
+              <div className="dash-stat-label">Maior pedido</div>
+              <div className="dash-stat-value" style={{ fontSize: statsHist.maior_pedido >= 10000 ? 20 : 28 }}>{fmt(statsHist.maior_pedido)}</div>
             </div>
           </div>
         )}
 
-        <div className="card-body" style={{ padding: 0 }}>
-          {carregandoHist ? (
-            <div style={{ padding: 20, textAlign: 'center', color: 'var(--gray-600)', fontSize: 13 }}>Carregando…</div>
-          ) : historico.length === 0 ? (
-            <div className="empty-state">
-              <svg viewBox="0 0 24 24"><path d="M9 17H7v-3h2v3zm4 0h-2v-7h2v7zm4 0h-2v-5h2v5zm2 2H5V5h14v14zm0-16H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/></svg>
-              <p>Nenhum pedido gerado neste período.</p>
-            </div>
-          ) : (
-            <div className="hist-wrap" style={{ margin: 0 }}>
-              <div className="hist-header" style={{ gridTemplateColumns: '80px 1fr 130px 90px 110px' }}>
-                <span>Nº Orç.</span>
-                <span>Cliente</span>
-                <span>Vendedor</span>
-                <span>Data</span>
-                <span style={{ textAlign: 'right' }}>Total Final</span>
-              </div>
-              {historico.map(p => (
-                <div key={p.id} className="hist-row" style={{ gridTemplateColumns: '80px 1fr 130px 90px 110px' }}>
-                  <span style={{ fontWeight: 700, color: 'var(--blue)' }}>{p.numero_orcamento}</span>
-                  <span style={{ color: 'var(--gray-800)' }}>{p.cliente}</span>
-                  <span style={{ color: 'var(--gray-600)', fontSize: 12 }}>{p.vendedor_nome || '—'}</span>
-                  <span style={{ color: 'var(--gray-600)', fontSize: 12 }}>
-                    {p.criado_em ? new Date(p.criado_em).toLocaleDateString('pt-BR') : '—'}
-                  </span>
-                  <span style={{ textAlign: 'right', fontWeight: 700, color: 'var(--blue)' }}>{fmt(parseFloat(p.total_final) || 0)}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        {carregandoHist ? (
+          <div style={{ padding: 20, textAlign: 'center', color: 'var(--gray-600)', fontSize: 13 }}>Carregando…</div>
+        ) : historico.length === 0 ? (
+          <div className="empty-state">
+            <svg viewBox="0 0 24 24"><path d="M9 17H7v-3h2v3zm4 0h-2v-7h2v7zm4 0h-2v-5h2v5zm2 2H5V5h14v14zm0-16H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/></svg>
+            <p>Nenhum pedido gerado neste período.</p>
+          </div>
+        ) : (
+          <PVHistTable historico={historico} fmt={fmt} />
+        )}
       </div>
       </div>
     );

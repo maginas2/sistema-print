@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { fmt } from '../utils/fmt';
 import { gerarRelatoriosPDF } from '../utils/pdf';
 import { apiFetch } from '../lib/api.js';
@@ -33,6 +33,7 @@ export default function Relatorios({ usuario }) {
   const [dataFim,         setDataFim]         = useState('');
   const [filtroUsuarioId, setFiltroUsuarioId] = useState('todos');
   const [filtroStatus,    setFiltroStatus]    = useState('todos');
+  const [tipoFiltro,      setTipoFiltro]      = useState('todos');
   const [listaUsuarios,   setListaUsuarios]   = useState([]);
   const [dados,           setDados]           = useState(null);
   const [carregando,      setCarregando]      = useState(false);
@@ -104,8 +105,40 @@ export default function Relatorios({ usuario }) {
     gerar();
   }
 
-  const stats     = dados?.stats;
-  const registros = dados?.registros ?? [];
+  function tipoOrcamento(o) {
+    const itens = o.itens_orcamento || [];
+    if (itens.length === 0) return null;
+    const temM2  = itens.some(i => parseFloat(i.largura) > 0 || parseFloat(i.altura) > 0);
+    const temSrv = itens.some(i => parseFloat(i.largura) === 0 && parseFloat(i.altura) === 0);
+    if (temM2 && temSrv) return 'misto';
+    if (temM2) return 'm2';
+    return 'servico';
+  }
+
+  const registrosBrutos = dados?.registros ?? [];
+
+  const registros = useMemo(() => {
+    if (tipoFiltro === 'todos') return registrosBrutos;
+    return registrosBrutos.filter(o => {
+      const t = tipoOrcamento(o);
+      if (tipoFiltro === 'sem-itens') return t === null;
+      return t === tipoFiltro;
+    });
+  }, [registrosBrutos, tipoFiltro]);
+
+  const stats = useMemo(() => {
+    const base = dados?.stats;
+    if (!base || tipoFiltro === 'todos') return base;
+    const totais = registros.map(o => parseFloat(o.total) || 0);
+    const valor_total = totais.reduce((s, v) => s + v, 0);
+    return {
+      total_orcamentos: registros.length,
+      valor_total,
+      ticket_medio:     registros.length > 0 ? valor_total / registros.length : 0,
+      maior_orcamento:  totais.length > 0 ? Math.max(...totais) : 0,
+    };
+  }, [dados, tipoFiltro, registros]);
+
   const labelPeriodo = PERIODOS.find(p => p.value === periodo)?.label ?? '';
 
   return (
@@ -164,6 +197,27 @@ export default function Relatorios({ usuario }) {
                   style={filtroStatus !== s.value && s.value === 'pendente' ? { color: 'var(--yellow-dark)', borderColor: 'var(--yellow-dark)' } : filtroStatus !== s.value && s.value === 'concluido' ? { color: 'var(--green)', borderColor: 'var(--green)' } : {}}
                 >
                   {s.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="field" style={{ maxWidth: 480 }}>
+            <label>Tipo de serviço</label>
+            <div className="period-tabs">
+              {[
+                { value: 'todos',     label: 'Todos' },
+                { value: 'm2',        label: 'Sob Medida' },
+                { value: 'servico',   label: 'Serviço Fixo' },
+                { value: 'misto',     label: 'Misto' },
+                { value: 'sem-itens', label: 'Sem itens' },
+              ].map(t => (
+                <button
+                  key={t.value}
+                  className={`period-tab${tipoFiltro === t.value ? ' active' : ''}`}
+                  onClick={() => setTipoFiltro(t.value)}
+                >
+                  {t.label}
                 </button>
               ))}
             </div>

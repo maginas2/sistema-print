@@ -21,7 +21,7 @@ export async function gerar(req, res) {
 
   let query = supabase
     .from('orcamentos')
-    .select('id, cliente, numero, total, criado_em, status, usuario_id, usuarios(nome)')
+    .select('id, cliente, numero, total, criado_em, status, usuario_id, usuarios(nome), itens_orcamento(largura, altura)')
     .order('criado_em', { ascending: false });
 
   const agora = new Date();
