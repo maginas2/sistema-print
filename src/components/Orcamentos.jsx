@@ -48,6 +48,9 @@ export default function Orcamentos({ historico, onRecarregar, onAtualizarStatus,
   const [statusFiltro,   setStatusFiltro]   = useState('todos');
   const [tipoFiltro,     setTipoFiltro]     = useState('todos');
   const [periodoFiltro,  setPeriodoFiltro]  = useState('todos');
+  const [pagina,         setPagina]         = useState(1);
+
+  const POR_PAGINA = 10;
 
   /* ── Download ─────────────────────────────────── */
   const [baixando, setBaixando] = useState(null);
@@ -219,6 +222,7 @@ export default function Orcamentos({ historico, onRecarregar, onAtualizarStatus,
 
   /* ── Filtros ──────────────────────────────────── */
   const filtrados = useMemo(() => {
+    setPagina(1);
     return filtrarPorPeriodo(historico, periodoFiltro)
       .filter(o => statusFiltro === 'todos' || o.status === statusFiltro)
       .filter(o => {
@@ -233,6 +237,11 @@ export default function Orcamentos({ historico, onRecarregar, onAtualizarStatus,
         return o.cliente.toLowerCase().includes(q) || o.numero.toLowerCase().includes(q) || (o.usuario_nome && o.usuario_nome.toLowerCase().includes(q));
       });
   }, [historico, periodoFiltro, statusFiltro, tipoFiltro, busca]);
+
+  const totalPaginas  = Math.max(1, Math.ceil(filtrados.length / POR_PAGINA));
+  const paginaAtual   = Math.min(pagina, totalPaginas);
+  const inicio        = (paginaAtual - 1) * POR_PAGINA;
+  const visiveis      = filtrados.slice(inicio, inicio + POR_PAGINA);
 
   const contagens = useMemo(() => ({
     todos:     historico.length,
@@ -350,7 +359,7 @@ export default function Orcamentos({ historico, onRecarregar, onAtualizarStatus,
               <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg>
               <p>{busca ? 'Nenhum resultado para sua busca.' : 'Nenhum orçamento nesta categoria.'}</p>
             </div>
-          ) : filtrados.map(o => (
+          ) : visiveis.map(o => (
             <div key={o.id} className="orc-row">
               <span className="orc-num">#{o.numero}</span>
               <span className="orc-cliente">{o.cliente}</span>
@@ -402,9 +411,32 @@ export default function Orcamentos({ historico, onRecarregar, onAtualizarStatus,
         </div>
 
         {filtrados.length > 0 && (
-          <div className="orc-footer">
-            Mostrando <strong>{filtrados.length}</strong> de <strong>{historico.length}</strong> orçamentos
-            {busca && <> para "<strong>{busca}</strong>"</>}
+          <div className="orc-footer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            <span>
+              Mostrando <strong>{inicio + 1}–{Math.min(inicio + POR_PAGINA, filtrados.length)}</strong> de <strong>{filtrados.length}</strong> orçamento{filtrados.length !== 1 ? 's' : ''}
+              {busca && <> para "<strong>{busca}</strong>"</>}
+            </span>
+            {totalPaginas > 1 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <button
+                  onClick={() => setPagina(p => Math.max(1, p - 1))}
+                  disabled={paginaAtual === 1}
+                  style={{ height: 28, padding: '0 12px', borderRadius: 6, border: '1.5px solid var(--gray-200)', background: 'transparent', color: 'var(--gray-800)', fontSize: 13, fontWeight: 600, cursor: paginaAtual === 1 ? 'default' : 'pointer', opacity: paginaAtual === 1 ? .4 : 1 }}
+                >← Anterior</button>
+                {Array.from({ length: totalPaginas }, (_, i) => i + 1).map(n => (
+                  <button
+                    key={n}
+                    onClick={() => setPagina(n)}
+                    style={{ width: 28, height: 28, borderRadius: 6, border: 'none', background: n === paginaAtual ? 'var(--blue)' : 'transparent', color: n === paginaAtual ? '#fff' : 'var(--gray-600)', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+                  >{n}</button>
+                ))}
+                <button
+                  onClick={() => setPagina(p => Math.min(totalPaginas, p + 1))}
+                  disabled={paginaAtual === totalPaginas}
+                  style={{ height: 28, padding: '0 12px', borderRadius: 6, border: '1.5px solid var(--gray-200)', background: 'transparent', color: 'var(--gray-800)', fontSize: 13, fontWeight: 600, cursor: paginaAtual === totalPaginas ? 'default' : 'pointer', opacity: paginaAtual === totalPaginas ? .4 : 1 }}
+                >Próximo →</button>
+              </div>
+            )}
           </div>
         )}
       </div>
