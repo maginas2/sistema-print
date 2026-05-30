@@ -208,7 +208,7 @@ export default function Calculadora({ produtos, produtoInicial, onSalvarHistoric
             <button
               type="button"
               onClick={() => { setModo('m2'); setResultado(null); limparForm(); }}
-              className={modo === 'm2' ? 'btn-primary' : 'btn-limpar-hist'}
+              className={modo === 'm2' ? 'btn-primary' : 'period-tab'}
               style={{ flex: 1, height: 40, fontSize: 13, borderRadius: 10 }}
             >
               <svg viewBox="0 0 24 24" style={{ width: 15, height: 15, fill: 'currentColor', marginRight: 6, verticalAlign: 'middle' }}><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
@@ -217,7 +217,7 @@ export default function Calculadora({ produtos, produtoInicial, onSalvarHistoric
             <button
               type="button"
               onClick={() => { setModo('servico'); setResultado(null); limparForm(); }}
-              className={modo === 'servico' ? 'btn-primary' : 'btn-limpar-hist'}
+              className={modo === 'servico' ? 'btn-primary' : 'period-tab'}
               style={{ flex: 1, height: 40, fontSize: 13, borderRadius: 10 }}
             >
               <svg viewBox="0 0 24 24" style={{ width: 15, height: 15, fill: 'currentColor', marginRight: 6, verticalAlign: 'middle' }}><path d="M22 9V7h-2V5c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-2h2v-2h-2v-2h2v-2h-2V9h2zm-4 10H4V5h14v14z"/></svg>
