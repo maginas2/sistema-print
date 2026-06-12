@@ -127,46 +127,39 @@ export default function App() {
           <button className={`nav-item${aba === 'dashboard' ? ' active' : ''}`} onClick={() => setAba('dashboard')}>
             <span className="nav-icon">{ICONS.dash}</span>
             <span className="nav-label">Visão Geral</span>
-            <span className="nav-arrow">{ICONS.arrow}</span>
           </button>
 
           <button className={`nav-item${aba === 'calculadora' ? ' active' : ''}`} onClick={() => setAba('calculadora')}>
             <span className="nav-icon">{ICONS.calc}</span>
             <span className="nav-label">Calculadora</span>
-            <span className="nav-arrow">{ICONS.arrow}</span>
           </button>
 
           <button className={`nav-item${aba === 'produtos' ? ' active' : ''}`} onClick={() => setAba('produtos')}>
             <span className="nav-icon">{ICONS.prod}</span>
             <span className="nav-label">Produtos</span>
             {produtos.length > 0 && <span className="nav-badge">{produtos.length}</span>}
-            <span className="nav-arrow">{ICONS.arrow}</span>
           </button>
 
           <button className={`nav-item${aba === 'orcamentos' ? ' active' : ''}`} onClick={() => setAba('orcamentos')}>
             <span className="nav-icon">{ICONS.orc}</span>
             <span className="nav-label">Orçamentos</span>
-            <span className="nav-arrow">{ICONS.arrow}</span>
           </button>
 
           <button className={`nav-item${aba === 'pedido' ? ' active' : ''}`} onClick={() => setAba('pedido')}>
             <span className="nav-icon">{ICONS.pedido}</span>
             <span className="nav-label">Pedido de Venda</span>
-            <span className="nav-arrow">{ICONS.arrow}</span>
           </button>
 
           <button className={`nav-item${aba === 'relatorios' ? ' active' : ''}`} onClick={() => setAba('relatorios')}>
             <span className="nav-icon">{ICONS.relat}</span>
             <span className="nav-label">Relatórios</span>
-            <span className="nav-arrow">{ICONS.arrow}</span>
           </button>
 
           {usuario.perfil === 'admin' && (
             <button className={`nav-item${aba === 'usuarios' ? ' active' : ''}`} onClick={() => setAba('usuarios')}>
               <span className="nav-icon">{ICONS.user}</span>
               <span className="nav-label">Usuários</span>
-              <span className="nav-arrow">{ICONS.arrow}</span>
-            </button>
+              </button>
           )}
         </nav>
 

@@ -30,6 +30,9 @@ export default function Calculadora({ produtos, produtoInicial, onSalvarHistoric
   const [qtdServico,   setQtdServico]   = useState('1');
   const [resultado, setResultado]   = useState(null);
   const [itens, setItens]           = useState([]);
+  const [desconto,  setDesconto]    = useState('');
+  const [acrescimo, setAcrescimo]   = useState('');
+  const [savedModal, setSavedModal] = useState(false);
 
   useEffect(() => {
     buscarProximoNumero().then(n => { if (n) setNumero(n); });
@@ -107,6 +110,8 @@ export default function Calculadora({ produtos, produtoInicial, onSalvarHistoric
     setItens([]);
     setCliente('');
     setObservacao('');
+    setDesconto('');
+    setAcrescimo('');
     limparForm();
     const n = await buscarProximoNumero();
     setNumero(n);
@@ -149,19 +154,26 @@ export default function Calculadora({ produtos, produtoInicial, onSalvarHistoric
   async function handleSalvar() {
     const todosItens = [...itens, ...(resultado ? [resultado] : [])];
     if (todosItens.length === 0) return;
+    const bruto = todosItens.reduce((s, i) => s + i.total, 0);
+    const desc  = toNum(desconto);
+    const acres = toNum(acrescimo);
     const dadosOrcamento = {
       cliente:    cliente.trim() || 'Não informado',
       numero:     numero.trim() || '—',
       data:       new Date().toLocaleDateString('pt-BR'),
       observacao: observacao.trim() || '',
       itens:      todosItens,
-      total:      todosItens.reduce((s, i) => s + i.total, 0),
+      total:      bruto - desc + acres,
     };
     await salvarOrcamento(dadosOrcamento);
-    alert('Orçamento salvo no sistema!');
+    setSavedModal(true);
   }
 
-  const totalGeral = itens.reduce((s, i) => s + i.total, 0);
+  const toNum = v => parseFloat(String(v).replace(',', '.').replace(/\.$/, '')) || 0;
+  const totalGeral     = itens.reduce((s, i) => s + i.total, 0);
+  const valorDesconto  = toNum(desconto);
+  const valorAcrescimo = toNum(acrescimo);
+  const totalFinal     = totalGeral - valorDesconto + valorAcrescimo;
   const handleKeyDown = e => { if (e.key === 'Enter') calcular(); };
 
   return (
@@ -397,10 +409,52 @@ export default function Calculadora({ produtos, produtoInicial, onSalvarHistoric
               ))}
             </div>
 
-            <div className="orcamento-total-bar">
-              <span>Total do orçamento</span>
-              <strong>{fmt(totalGeral)}</strong>
+            <div style={{ display: 'flex', gap: 12, margin: '12px 0 4px' }}>
+              <div className="field" style={{ flex: 1, marginBottom: 0 }}>
+                <label style={{ fontSize: 12 }}>Desconto (R$)</label>
+                <div className="input-wrap">
+                  <span className="input-prefix">R$</span>
+                  <input type="text" inputMode="decimal" className="has-prefix" placeholder="0,00" value={desconto} onChange={e => setDesconto(e.target.value)} />
+                </div>
+              </div>
+              <div className="field" style={{ flex: 1, marginBottom: 0 }}>
+                <label style={{ fontSize: 12 }}>Acréscimo (R$)</label>
+                <div className="input-wrap">
+                  <span className="input-prefix">R$</span>
+                  <input type="text" inputMode="decimal" className="has-prefix" placeholder="0,00" value={acrescimo} onChange={e => setAcrescimo(e.target.value)} />
+                </div>
+              </div>
             </div>
+
+            {(valorDesconto > 0 || valorAcrescimo > 0) ? (
+              <div style={{ background: 'var(--gray-50)', border: '1px solid var(--gray-200)', borderRadius: 10, padding: '12px 16px', marginTop: 8 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--gray-600)', marginBottom: 6 }}>
+                  <span>Subtotal</span>
+                  <span>{fmt(totalGeral)}</span>
+                </div>
+                {valorDesconto > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#DC2626', marginBottom: 6 }}>
+                    <span>Desconto</span>
+                    <span>− {fmt(valorDesconto)}</span>
+                  </div>
+                )}
+                {valorAcrescimo > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--green)', marginBottom: 6 }}>
+                    <span>Acréscimo</span>
+                    <span>+ {fmt(valorAcrescimo)}</span>
+                  </div>
+                )}
+                <div style={{ borderTop: '1px solid var(--gray-200)', paddingTop: 8, display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: 15, color: 'var(--gray-800)' }}>
+                  <span>Total final</span>
+                  <span style={{ color: 'var(--blue)' }}>{fmt(totalFinal)}</span>
+                </div>
+              </div>
+            ) : (
+              <div className="orcamento-total-bar">
+                <span>Total do orçamento</span>
+                <strong>{fmt(totalGeral)}</strong>
+              </div>
+            )}
 
             <div className="result-actions">
               <button className="btn-pdf" onClick={handleGerarPDF}>
@@ -413,6 +467,20 @@ export default function Calculadora({ produtos, produtoInicial, onSalvarHistoric
               </button>
               <button className="btn-reset" onClick={novoOrcamento}>Novo orçamento</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal salvo ──────────────────────────── */}
+      {savedModal && (
+        <div className="modal-overlay" onClick={() => setSavedModal(false)}>
+          <div className="modal-box" style={{ maxWidth: 400, textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+            <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'var(--green-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+              <svg viewBox="0 0 24 24" style={{ width: 28, height: 28, fill: 'var(--green)' }}><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+            </div>
+            <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--gray-800)', marginBottom: 8 }}>Orçamento salvo!</h3>
+            <p style={{ fontSize: 14, color: 'var(--gray-500)', marginBottom: 24 }}>O orçamento foi registrado com sucesso no sistema.</p>
+            <button className="btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={() => setSavedModal(false)}>OK</button>
           </div>
         </div>
       )}

@@ -371,6 +371,9 @@ select:focus { border-color: var(--blue); background-color: #fff; box-shadow: 0 
 
 /* History */
 .hist-wrap { display: flex; flex-direction: column; overflow-x: auto; }
+.hist-wrap::-webkit-scrollbar { height: 4px; }
+.hist-wrap::-webkit-scrollbar-track { background: var(--card-bg); }
+.hist-wrap::-webkit-scrollbar-thumb { background: var(--gray-300); border-radius: 99px; }
 .hist-header {
   display: grid;
   grid-template-columns: 1fr 80px 96px 72px 116px;

@@ -89,6 +89,9 @@ export default function Orcamentos({ historico, onRecarregar, onAtualizarStatus,
   const [eServico,  setEServico]  = useState('');
   const [ePrecoSrv, setEPrecoSrv] = useState('');
   const [eQtdSrv,   setEQtdSrv]   = useState('1');
+  // desconto / acréscimo
+  const [editDesconto,  setEditDesconto]  = useState('');
+  const [editAcrescimo, setEditAcrescimo] = useState('');
   // ações
   const [salvandoEdit, setSalvandoEdit] = useState(false);
   const [baixandoEdit, setBaixandoEdit] = useState(false);
@@ -138,6 +141,7 @@ export default function Orcamentos({ historico, onRecarregar, onAtualizarStatus,
     setCarregandoEdit(true);
     setOrcEditando(o);
     setEditCliente(''); setEditObservacao(''); setEditItens([]);
+    setEditDesconto(''); setEditAcrescimo('');
     setEditModo('m2');
     limparFormEdit();
     try {
@@ -154,6 +158,8 @@ export default function Orcamentos({ historico, onRecarregar, onAtualizarStatus,
 
   function fecharEdicao() {
     setOrcEditando(null);
+    setEditDesconto('');
+    setEditAcrescimo('');
     limparFormEdit();
   }
 
@@ -185,10 +191,13 @@ export default function Orcamentos({ historico, onRecarregar, onAtualizarStatus,
 
   async function salvarEdicao() {
     setSalvandoEdit(true);
+    const desc  = toNum(editDesconto);
+    const acres = toNum(editAcrescimo);
+    const totalFinal = editTotal - desc + acres;
     try {
       await apiFetch(`/api/orcamentos/${orcEditando.id}`, {
         method: 'PUT',
-        body: JSON.stringify({ cliente: editCliente, observacao: editObservacao, itens: editItens }),
+        body: JSON.stringify({ cliente: editCliente, observacao: editObservacao, itens: editItens, total: totalFinal }),
       });
       onRecarregar();
       fecharEdicao();
@@ -212,7 +221,10 @@ export default function Orcamentos({ historico, onRecarregar, onAtualizarStatus,
     finally { setBaixandoEdit(false); }
   }
 
-  const editTotal = editItens.reduce((s, i) => s + (parseFloat(i.total) || 0), 0);
+  const editTotal       = editItens.reduce((s, i) => s + (parseFloat(i.total) || 0), 0);
+  const editValDesc     = toNum(editDesconto);
+  const editValAcres    = toNum(editAcrescimo);
+  const editTotalFinal  = editTotal - editValDesc + editValAcres;
 
   /* ── Exclusão ─────────────────────────────────── */
   function executarExcluir() {
@@ -676,6 +688,49 @@ export default function Orcamentos({ historico, onRecarregar, onAtualizarStatus,
                     </div>
                   )}
                 </div>
+
+                {/* Desconto / Acréscimo */}
+                {editItens.length > 0 && (
+                  <div>
+                    <div style={{ display: 'flex', gap: 12, marginBottom: 8 }}>
+                      <div className="field" style={{ flex: 1, marginBottom: 0 }}>
+                        <label style={{ fontSize: 12 }}>Desconto (R$)</label>
+                        <div className="input-wrap">
+                          <span className="input-prefix">R$</span>
+                          <input type="text" inputMode="decimal" className="has-prefix" placeholder="0,00" value={editDesconto} onChange={e => setEditDesconto(e.target.value)} />
+                        </div>
+                      </div>
+                      <div className="field" style={{ flex: 1, marginBottom: 0 }}>
+                        <label style={{ fontSize: 12 }}>Acréscimo (R$)</label>
+                        <div className="input-wrap">
+                          <span className="input-prefix">R$</span>
+                          <input type="text" inputMode="decimal" className="has-prefix" placeholder="0,00" value={editAcrescimo} onChange={e => setEditAcrescimo(e.target.value)} />
+                        </div>
+                      </div>
+                    </div>
+                    {(editValDesc > 0 || editValAcres > 0) && (
+                      <div style={{ background: 'var(--gray-50)', border: '1px solid var(--gray-200)', borderRadius: 10, padding: '12px 16px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--gray-600)', marginBottom: 6 }}>
+                          <span>Subtotal</span><span>{fmt(editTotal)}</span>
+                        </div>
+                        {editValDesc > 0 && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#DC2626', marginBottom: 6 }}>
+                            <span>Desconto</span><span>− {fmt(editValDesc)}</span>
+                          </div>
+                        )}
+                        {editValAcres > 0 && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--green)', marginBottom: 6 }}>
+                            <span>Acréscimo</span><span>+ {fmt(editValAcres)}</span>
+                          </div>
+                        )}
+                        <div style={{ borderTop: '1px solid var(--gray-200)', paddingTop: 8, display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: 15, color: 'var(--gray-800)' }}>
+                          <span>Total final</span>
+                          <span style={{ color: 'var(--blue)' }}>{fmt(editTotalFinal)}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Adicionar item */}
                 <div>
