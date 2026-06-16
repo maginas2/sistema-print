@@ -35,6 +35,7 @@ export default function Calculadora({ produtos, produtoInicial, onSalvarHistoric
   const [savedModal, setSavedModal] = useState(false);
   const [gerandoPdf, setGerandoPdf] = useState(false);
   const [salvando,   setSalvando]   = useState(false);
+  const [errorModal, setErrorModal] = useState(null);
 
   useEffect(() => {
     buscarProximoNumero().then(n => { if (n) setNumero(n); });
@@ -62,9 +63,9 @@ export default function Calculadora({ produtos, produtoInicial, onSalvarHistoric
 
   function calcular() {
     const toNum = v => parseFloat(String(v).replace(',', '.').replace(/\.$/, '')) || 0;
-    if (!produto.trim())        { alert('Informe o nome do produto ou material.'); return; }
-    if (toNum(preco) <= 0)      { alert('Informe o preço por m² maior que zero.'); return; }
-    if (toNum(largura) <= 0 || toNum(altura) <= 0) { alert('Informe largura e altura maiores que zero.'); return; }
+    if (!produto.trim())        { setErrorModal('Informe o nome do produto ou material.'); return; }
+    if (toNum(preco) <= 0)      { setErrorModal('Informe o preço por m² maior que zero.'); return; }
+    if (toNum(largura) <= 0 || toNum(altura) <= 0) { setErrorModal('Informe largura e altura maiores que zero.'); return; }
 
     const p = toNum(preco);
     const l = toNum(largura);
@@ -95,8 +96,8 @@ export default function Calculadora({ produtos, produtoInicial, onSalvarHistoric
 
   function calcularServico() {
     const toNum = v => parseFloat(String(v).replace(',', '.').replace(/\.$/, '')) || 0;
-    if (!nomeServico.trim())   { alert('Informe o nome do serviço.'); return; }
-    if (toNum(precoServico) <= 0) { alert('Informe o preço maior que zero.'); return; }
+    if (!nomeServico.trim())   { setErrorModal('Informe o nome do serviço.'); return; }
+    if (toNum(precoServico) <= 0) { setErrorModal('Informe o preço maior que zero.'); return; }
     const p = toNum(precoServico);
     const q = parseInt(qtdServico) || 1;
     setResultado({ produto: nomeServico.trim(), preco: p, largura: 0, altura: 0, quantidade: q, area: 0, valorUnit: p, total: p * q, tipo: 'servico' });
@@ -480,6 +481,20 @@ export default function Calculadora({ produtos, produtoInicial, onSalvarHistoric
               </button>
               <button className="btn-reset" onClick={novoOrcamento}>Novo orçamento</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal de erro ───────────────────────── */}
+      {errorModal && (
+        <div className="modal-overlay" onClick={() => setErrorModal(null)}>
+          <div className="modal-box" style={{ maxWidth: 400, textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+            <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#FEE2E2', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+              <svg viewBox="0 0 24 24" style={{ width: 28, height: 28, fill: '#DC2626' }}><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+            </div>
+            <h3 style={{ fontSize: 18, fontWeight: 700, color: '#ffffff', marginBottom: 8 }}>Campo obrigatório</h3>
+            <p style={{ fontSize: 14, color: '#ffffff', marginBottom: 24 }}>{errorModal}</p>
+            <button className="btn-primary" style={{ width: '100%', justifyContent: 'center', background: '#DC2626', borderColor: '#DC2626' }} onClick={() => setErrorModal(null)}>OK</button>
           </div>
         </div>
       )}
