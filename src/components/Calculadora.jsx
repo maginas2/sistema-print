@@ -33,6 +33,8 @@ export default function Calculadora({ produtos, produtoInicial, onSalvarHistoric
   const [desconto,  setDesconto]    = useState('');
   const [acrescimo, setAcrescimo]   = useState('');
   const [savedModal, setSavedModal] = useState(false);
+  const [gerandoPdf, setGerandoPdf] = useState(false);
+  const [salvando,   setSalvando]   = useState(false);
 
   useEffect(() => {
     buscarProximoNumero().then(n => { if (n) setNumero(n); });
@@ -137,36 +139,47 @@ export default function Calculadora({ produtos, produtoInicial, onSalvarHistoric
   }
 
   async function handleGerarPDF() {
+    if (gerandoPdf) return;
     const todosItens = [...itens, ...(resultado ? [resultado] : [])];
     if (todosItens.length === 0) return;
-    const dadosOrcamento = {
-      cliente:    cliente.trim() || 'Não informado',
-      numero:     numero.trim() || '—',
-      data:       new Date().toLocaleDateString('pt-BR'),
-      observacao: observacao.trim() || '',
-      itens:      todosItens,
-      total:      todosItens.reduce((s, i) => s + i.total, 0),
-    };
-    await gerarPDF(dadosOrcamento);
-    await salvarOrcamento(dadosOrcamento);
+    setGerandoPdf(true);
+    try {
+      const dadosOrcamento = {
+        cliente:    cliente.trim() || 'Não informado',
+        numero:     numero.trim() || '—',
+        data:       new Date().toLocaleDateString('pt-BR'),
+        observacao: observacao.trim() || '',
+        itens:      todosItens,
+        total:      todosItens.reduce((s, i) => s + i.total, 0),
+      };
+      await gerarPDF(dadosOrcamento);
+    } finally {
+      setGerandoPdf(false);
+    }
   }
 
   async function handleSalvar() {
+    if (gerandoPdf || salvando) return;
     const todosItens = [...itens, ...(resultado ? [resultado] : [])];
     if (todosItens.length === 0) return;
-    const bruto = todosItens.reduce((s, i) => s + i.total, 0);
-    const desc  = toNum(desconto);
-    const acres = toNum(acrescimo);
-    const dadosOrcamento = {
-      cliente:    cliente.trim() || 'Não informado',
-      numero:     numero.trim() || '—',
-      data:       new Date().toLocaleDateString('pt-BR'),
-      observacao: observacao.trim() || '',
-      itens:      todosItens,
-      total:      bruto - desc + acres,
-    };
-    await salvarOrcamento(dadosOrcamento);
-    setSavedModal(true);
+    setSalvando(true);
+    try {
+      const bruto = todosItens.reduce((s, i) => s + i.total, 0);
+      const desc  = toNum(desconto);
+      const acres = toNum(acrescimo);
+      const dadosOrcamento = {
+        cliente:    cliente.trim() || 'Não informado',
+        numero:     numero.trim() || '—',
+        data:       new Date().toLocaleDateString('pt-BR'),
+        observacao: observacao.trim() || '',
+        itens:      todosItens,
+        total:      bruto - desc + acres,
+      };
+      await salvarOrcamento(dadosOrcamento);
+      setSavedModal(true);
+    } finally {
+      setSalvando(false);
+    }
   }
 
   const toNum = v => parseFloat(String(v).replace(',', '.').replace(/\.$/, '')) || 0;
@@ -356,9 +369,9 @@ export default function Calculadora({ produtos, produtoInicial, onSalvarHistoric
                   <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
                   Adicionar ao orçamento
                 </button>
-                <button className="btn-pdf" onClick={handleGerarPDF}>
+                <button className="btn-pdf" onClick={handleGerarPDF} disabled={gerandoPdf || salvando}>
                   <svg viewBox="0 0 24 24"><path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5V11H19v2h-1.5V7h3v1.5zM9 9.5h1v-1H9v1zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm10 5.5h1v-3h-1v3z"/></svg>
-                  Gerar PDF
+                  {gerandoPdf ? 'Gerando…' : 'Gerar PDF'}
                 </button>
                 <button className="btn-reset" onClick={novoCalculo}>Cancelar</button>
               </div>
@@ -457,13 +470,13 @@ export default function Calculadora({ produtos, produtoInicial, onSalvarHistoric
             )}
 
             <div className="result-actions">
-              <button className="btn-pdf" onClick={handleGerarPDF}>
+              <button className="btn-pdf" onClick={handleGerarPDF} disabled={gerandoPdf || salvando}>
                 <svg viewBox="0 0 24 24"><path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5V11H19v2h-1.5V7h3v1.5zM9 9.5h1v-1H9v1zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm10 5.5h1v-3h-1v3z"/></svg>
-                Gerar PDF do Orçamento
+                {gerandoPdf ? 'Gerando…' : 'Gerar PDF do Orçamento'}
               </button>
-              <button className="btn-salvar" onClick={handleSalvar}>
+              <button className="btn-salvar" onClick={handleSalvar} disabled={gerandoPdf || salvando}>
                 <svg viewBox="0 0 24 24"><path d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7l-4-4zm-5 16a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm3-10H5V5h10v4z"/></svg>
-                Salvar no Sistema
+                {salvando ? 'Salvando…' : 'Salvar no Sistema'}
               </button>
               <button className="btn-reset" onClick={novoOrcamento}>Novo orçamento</button>
             </div>
