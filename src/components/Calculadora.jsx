@@ -115,6 +115,7 @@ export default function Calculadora({ produtos, produtoInicial, onSalvarHistoric
     setObservacao('');
     setDesconto('');
     setAcrescimo('');
+    setJaFoiSalvo(false);
     limparForm();
     const n = await buscarProximoNumero();
     setNumero(n);
@@ -501,14 +502,14 @@ export default function Calculadora({ produtos, produtoInicial, onSalvarHistoric
 
       {/* ── Modal salvo ──────────────────────────── */}
       {savedModal && (
-        <div className="modal-overlay" onClick={() => setSavedModal(false)}>
+        <div className="modal-overlay" onClick={() => { setSavedModal(false); novoOrcamento(); }}>
           <div className="modal-box" style={{ maxWidth: 400, textAlign: 'center' }} onClick={e => e.stopPropagation()}>
             <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'var(--green-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
               <svg viewBox="0 0 24 24" style={{ width: 28, height: 28, fill: 'var(--green)' }}><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
             </div>
             <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--gray-800)', marginBottom: 8 }}>Orçamento salvo!</h3>
-            <p style={{ fontSize: 14, color: 'var(--gray-500)', marginBottom: 24 }}>O orçamento foi registrado com sucesso no sistema.</p>
-            <button className="btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={() => setSavedModal(false)}>OK</button>
+            <p style={{ fontSize: 14, color: 'var(--gray-600)', marginBottom: 24 }}>O orçamento foi registrado com sucesso no sistema.</p>
+            <button className="btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={() => { setSavedModal(false); novoOrcamento(); }}>OK</button>
           </div>
         </div>
       )}

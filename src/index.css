@@ -251,6 +251,8 @@ select:focus { border-color: var(--blue); background-color: #fff; box-shadow: 0 
 .btn-salvar svg { width: 18px; height: 18px; fill: #fff; flex-shrink: 0; }
 .btn-salvar:hover { background: #15803d; }
 .btn-salvar:active { transform: scale(.97); }
+.btn-salvar:disabled { background: var(--gray-400); color: #fff; cursor: not-allowed; opacity: .7; }
+.btn-pdf:disabled { opacity: .6; cursor: not-allowed; }
 .btn-reset { background: transparent; color: var(--gray-600); height: 42px; border: 1.5px solid var(--gray-200); border-radius: 8px; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; padding: 0 16px; transition: background .2s; }
 .btn-reset:hover { background: var(--gray-100); }
 
