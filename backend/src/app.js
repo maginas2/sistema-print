@@ -10,17 +10,19 @@ import pedidosVendaRoutes from './routes/pedidosVenda.js';
 
 const app = express();
 
-const extraOrigins = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
-  : [];
+const origensPermitidas = [
+  'http://localhost:5173',
+  'http://localhost:5175',
+  ...(process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
+    : []),
+];
 
 app.use(helmet());
 app.use(cors({
   origin: (origin, cb) => {
     if (!origin) return cb(null, true);
-    if (origin === 'http://localhost:5175') return cb(null, true);
-    if (process.env.VERCEL && origin.endsWith('.vercel.app')) return cb(null, true);
-    if (extraOrigins.includes(origin)) return cb(null, true);
+    if (origensPermitidas.includes(origin)) return cb(null, true);
     cb(new Error('CORS não permitido'));
   },
 }));

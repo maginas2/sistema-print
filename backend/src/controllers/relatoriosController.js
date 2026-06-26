@@ -5,7 +5,8 @@ const STATUS_VALIDOS   = ['pendente', 'concluido', 'todos'];
 const DATE_REGEX       = /^\d{4}-\d{2}-\d{2}$/;
 
 export async function gerar(req, res) {
-  const { periodo, data_inicio, data_fim, usuario_id, perfil, filtro_usuario_id, filtro_status } = req.query;
+  const { perfil, id: usuario_id } = req.usuario;
+  const { periodo, data_inicio, data_fim, filtro_usuario_id, filtro_status } = req.query;
 
   if (!PERIODOS_VALIDOS.includes(periodo)) {
     return res.status(400).json({ erro: 'Período inválido.' });

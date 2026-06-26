@@ -32,7 +32,8 @@ export async function salvar(req, res) {
 }
 
 export async function listar(req, res) {
-  const { periodo = 'todos', data_inicio, data_fim, usuario_id, perfil } = req.query;
+  const { perfil, id: usuario_id } = req.usuario;
+  const { periodo = 'todos', data_inicio, data_fim } = req.query;
 
   if (!PERIODOS_VALIDOS.includes(periodo)) {
     return res.status(400).json({ erro: 'Período inválido.' });
@@ -74,9 +75,7 @@ export async function listar(req, res) {
       .lte('criado_em', fim.toISOString());
   }
 
-  if (perfil === 'admin') {
-    // admin vê todos
-  } else if (usuario_id) {
+  if (perfil !== 'admin') {
     query = query.eq('usuario_id', usuario_id);
   }
 

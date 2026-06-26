@@ -4,7 +4,7 @@ const PERIODOS_VALIDOS = ['diario', 'semanal', 'mensal', 'anual', 'personalizado
 const STATUS_VALIDOS   = ['pendente', 'concluido'];
 
 export async function listar(req, res) {
-  const { usuario_id, perfil } = req.query;
+  const { perfil, id: usuario_id } = req.usuario;
 
   let query = supabase
     .from('orcamentos')
@@ -12,7 +12,7 @@ export async function listar(req, res) {
     .order('criado_em', { ascending: false })
     .limit(200);
 
-  if (perfil !== 'admin' && usuario_id) {
+  if (perfil !== 'admin') {
     query = query.eq('usuario_id', usuario_id);
   }
 

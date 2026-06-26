@@ -13,3 +13,10 @@ export function autenticar(req, res, next) {
     return res.status(401).json({ erro: 'Token inválido ou expirado. Faça login novamente.' });
   }
 }
+
+export function somenteAdmin(req, res, next) {
+  if (req.usuario?.perfil !== 'admin') {
+    return res.status(403).json({ erro: 'Acesso restrito a administradores.' });
+  }
+  next();
+}
