@@ -222,7 +222,7 @@ export default function Orcamentos({ historico, onRecarregar, onAtualizarStatus,
   }
 
   const editTotal       = editItens.reduce((s, i) => s + (parseFloat(i.total) || 0), 0);
-  const editValDesc     = toNum(editDesconto);
+  const editValDesc     = editTotal * toNum(editDesconto) / 100;
   const editValAcres    = toNum(editAcrescimo);
   const editTotalFinal  = editTotal - editValDesc + editValAcres;
 
@@ -694,10 +694,10 @@ export default function Orcamentos({ historico, onRecarregar, onAtualizarStatus,
                   <div>
                     <div style={{ display: 'flex', gap: 12, marginBottom: 8 }}>
                       <div className="field" style={{ flex: 1, marginBottom: 0 }}>
-                        <label style={{ fontSize: 12 }}>Desconto (R$)</label>
+                        <label style={{ fontSize: 12 }}>Desconto (%)</label>
                         <div className="input-wrap">
-                          <span className="input-prefix">R$</span>
-                          <input type="text" inputMode="decimal" className="has-prefix" placeholder="0,00" value={editDesconto} onChange={e => setEditDesconto(e.target.value)} />
+                          <span className="input-prefix">%</span>
+                          <input type="text" inputMode="decimal" className="has-prefix" placeholder="0" value={editDesconto} onChange={e => setEditDesconto(e.target.value)} />
                         </div>
                       </div>
                       <div className="field" style={{ flex: 1, marginBottom: 0 }}>

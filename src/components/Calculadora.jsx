@@ -30,8 +30,8 @@ export default function Calculadora({ produtos, produtoInicial, onSalvarHistoric
   const [qtdServico,   setQtdServico]   = useState('1');
   const [resultado, setResultado]   = useState(null);
   const [itens, setItens]           = useState([]);
-  const [desconto,  setDesconto]    = useState('');
-  const [acrescimo, setAcrescimo]   = useState('');
+  const [desconto,  setDesconto]  = useState('');
+  const [acrescimo, setAcrescimo] = useState('');
   const [savedModal, setSavedModal] = useState(false);
   const [gerandoPdf, setGerandoPdf] = useState(false);
   const [salvando,   setSalvando]   = useState(false);
@@ -166,7 +166,7 @@ export default function Calculadora({ produtos, produtoInicial, onSalvarHistoric
     setSalvando(true);
     try {
       const bruto = todosItens.reduce((s, i) => s + i.total, 0);
-      const desc  = toNum(desconto);
+      const desc  = bruto * toNum(desconto) / 100;
       const acres = toNum(acrescimo);
       const dadosOrcamento = {
         cliente:    cliente.trim() || 'Não informado',
@@ -185,7 +185,7 @@ export default function Calculadora({ produtos, produtoInicial, onSalvarHistoric
 
   const toNum = v => parseFloat(String(v).replace(',', '.').replace(/\.$/, '')) || 0;
   const totalGeral     = itens.reduce((s, i) => s + i.total, 0);
-  const valorDesconto  = toNum(desconto);
+  const valorDesconto  = totalGeral * toNum(desconto) / 100;
   const valorAcrescimo = toNum(acrescimo);
   const totalFinal     = totalGeral - valorDesconto + valorAcrescimo;
   const handleKeyDown = e => { if (e.key === 'Enter') calcular(); };
@@ -425,10 +425,10 @@ export default function Calculadora({ produtos, produtoInicial, onSalvarHistoric
 
             <div style={{ display: 'flex', gap: 12, margin: '12px 0 4px' }}>
               <div className="field" style={{ flex: 1, marginBottom: 0 }}>
-                <label style={{ fontSize: 12 }}>Desconto (R$)</label>
+                <label style={{ fontSize: 12 }}>Desconto (%)</label>
                 <div className="input-wrap">
-                  <span className="input-prefix">R$</span>
-                  <input type="text" inputMode="decimal" className="has-prefix" placeholder="0,00" value={desconto} onChange={e => setDesconto(e.target.value)} />
+                  <span className="input-prefix">%</span>
+                  <input type="text" inputMode="decimal" className="has-prefix" placeholder="0" value={desconto} onChange={e => setDesconto(e.target.value)} />
                 </div>
               </div>
               <div className="field" style={{ flex: 1, marginBottom: 0 }}>
