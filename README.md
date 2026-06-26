@@ -68,10 +68,12 @@ SUPABASE_URL=https://SEU_PROJETO.supabase.co
 SUPABASE_SERVICE_KEY=sua_service_role_key
 JWT_SECRET=uma_string_longa_e_aleatoria_aqui
 PORT=3001
+ALLOWED_ORIGINS=https://seu-projeto.vercel.app
 ```
 
 > - Use a **service role key** do Supabase (não a anon key), pois ela ignora as políticas de RLS.
 > - O `JWT_SECRET` deve ter pelo menos 32 caracteres. Nunca o exponha em repositórios públicos.
+> - `ALLOWED_ORIGINS` define quais domínios podem chamar a API. Sem essa variável, apenas `localhost` é aceito em produção.
 
 ### 3.2 Banco de dados
 
@@ -265,6 +267,7 @@ Configure no painel do projeto (Settings → Environment Variables):
 SUPABASE_URL=https://SEU_PROJETO.supabase.co
 SUPABASE_SERVICE_KEY=sua_service_role_key
 JWT_SECRET=sua_chave_secreta
+ALLOWED_ORIGINS=https://seu-projeto.vercel.app
 ```
 
 ### Como fazer o deploy
@@ -284,19 +287,31 @@ Após o login, o backend gera um **token JWT com validade de 8 horas** assinado 
 
 Todas as rotas da API (exceto `/api/auth/login`) são protegidas pelo middleware `autenticar`, que rejeita requisições sem token válido com `401 Unauthorized`.
 
+### Controle de acesso por perfil (backend)
+
+As rotas de criação, edição e exclusão de usuários (`POST /PUT /DELETE /api/usuarios`) exigem o middleware `somenteAdmin`, que lê o perfil diretamente do token JWT verificado — nunca de parâmetros enviados pelo cliente. Um `operador` que tente acessar essas rotas recebe `403 Forbidden`.
+
+Da mesma forma, todos os controllers que filtram dados por usuário (`orcamentos`, `relatorios`, `pedidos-venda`) extraem o `id` e o `perfil` de `req.usuario` (token), e não de query params — impedindo que um usuário forje `?perfil=admin` na URL.
+
 ### Expiração de sessão
 
 Quando o token expira ou é inválido, o frontend detecta o `401`, limpa o `localStorage` e redireciona para o login automaticamente — sem intervenção manual.
+
+### CORS por domínio exato
+
+A API aceita apenas origens explicitamente listadas: `localhost` em desenvolvimento e os domínios definidos em `ALLOWED_ORIGINS` em produção. O wildcard `*.vercel.app` não é utilizado — apenas o domínio exato do projeto é permitido.
 
 ### Outras proteções
 
 | Proteção | Detalhe |
 |---|---|
 | **Helmet** | Cabeçalhos HTTP de segurança aplicados globalmente |
-| **Validação de entrada** | Nome limitado a 100 caracteres, senha a 128 — tipos verificados no login |
+| **Rate limiting** | Login limitado a 10 tentativas por 15 minutos |
+| **Validação de entrada** | Tipos, tamanhos e valores verificados em todos os controllers |
 | **Limite de payload** | Requisições JSON limitadas a 1 MB |
-| **Hash de senhas** | Armazenadas apenas como bcrypt — nunca em texto puro |
+| **Hash de senhas** | Armazenadas apenas como bcrypt (10 rounds) — nunca em texto puro |
 | **Resposta sem senha** | O campo `senha` nunca é retornado pela API |
+| **Variáveis de ambiente** | Chaves e secrets nunca versionados no Git (`.gitignore` protege `.env`) |
 
 ### Cliente API centralizado (`src/lib/api.js`)
 
@@ -336,7 +351,9 @@ A calculadora oferece dois modos, alternáveis pelo toggle no topo do formulári
 
 Itens dos dois modos convivem no mesmo orçamento. Na lista de itens, cada um exibe um badge **M²** (verde) ou **SERVIÇO** (azul). O PDF e o banco tratam cada tipo corretamente.
 
-Ao finalizar: **Salvar no Sistema** registra no banco; **Gerar PDF** baixa o arquivo.
+Na lista de itens é possível aplicar **Desconto (%)** — o valor digitado é calculado como percentual do subtotal — e **Acréscimo (R$)**. O resumo de subtotal, desconto e total final aparece automaticamente ao preencher esses campos.
+
+Ao finalizar: **Salvar no Sistema** registra no banco e limpa o formulário automaticamente para um novo orçamento; **Gerar PDF** baixa o arquivo.
 
 > A observação é salva junto ao orçamento e exibida em destaque no Pedido de Venda.
 
@@ -356,7 +373,7 @@ Ao finalizar: **Salvar no Sistema** registra no banco; **Gerar PDF** baixa o arq
 - **Coluna Tipo** na tabela: badge visual indicando o tipo de cada orçamento
 - Botão **Concluir / Reabrir** para alternar o status
 - Ícone **Visualizar** (olho): modal com todos os detalhes, itens, observação e atalhos para editar/baixar PDF
-- Ícone **Editar** (lápis): modal de edição com campos do cliente, observação, lista de itens (adicionar/remover m² e serviço), botão Baixar PDF antes de salvar
+- Ícone **Editar** (lápis): modal de edição com campos do cliente, observação, lista de itens (adicionar/remover m² e serviço), **Desconto (%)** e **Acréscimo (R$)**, botão Baixar PDF antes de salvar
 - Ícone **Download**: gera e baixa o PDF do orçamento diretamente da lista
 - **Modal de exclusão** com confirmação visual (substitui o `window.confirm` nativo)
 - Admin pode excluir orçamentos
@@ -374,7 +391,7 @@ Aba dedicada à emissão de pedidos de venda em PDF a partir de orçamentos exis
 5. Preencha os campos opcionais:
    - **Situação Atual** — ex: "Entrega direta ao cliente"
    - **Condições de Pagamento** — ex: "50% entrada + saldo na entrega"
-   - **Desconto (R$)** — abatido do total calculado
+   - **Desconto (R$)** — valor fixo abatido do total calculado
 6. Clique em **Gerar Pedido de Venda (PDF)** — o PDF é baixado e a emissão é salva no banco
 
 **Fallback para orçamentos antigos:** orçamentos criados antes da atualização (sem itens salvos individualmente) exibem uma linha "Conforme orçamento nº XXXX" com o total consolidado.
@@ -469,7 +486,7 @@ Sistema Print/
 │   │   │   ├── relatoriosController.js   ← filtros por período/usuário/status
 │   │   │   └── pedidosVendaController.js ← salvar emissão de PDF + listar com stats por período
 │   │   ├── middleware/
-│   │   │   └── auth.js                   ← verifica JWT em todas as rotas protegidas
+│   │   │   └── auth.js                   ← `autenticar` (JWT) + `somenteAdmin` (perfil do token)
 │   │   ├── routes/
 │   │   │   ├── auth.js
 │   │   │   ├── usuarios.js               ← GET / POST / PUT /:id / DELETE /:id
@@ -576,7 +593,7 @@ Todas as rotas (exceto `/api/auth/login`) exigem o header `Authorization: Bearer
 ### Usuários
 | Método | Rota | Descrição |
 |---|---|---|
-| GET | `/api/usuarios` | Lista todos os usuários |
-| POST | `/api/usuarios` | Cadastra novo usuário |
-| PUT | `/api/usuarios/:id` | Edita usuário |
-| DELETE | `/api/usuarios/:id` | Exclui usuário |
+| GET | `/api/usuarios` | Lista todos os usuários *(requer login)* |
+| POST | `/api/usuarios` | Cadastra novo usuário *(somente admin)* |
+| PUT | `/api/usuarios/:id` | Edita usuário *(somente admin)* |
+| DELETE | `/api/usuarios/:id` | Exclui usuário *(somente admin)* |

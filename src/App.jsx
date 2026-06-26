@@ -50,6 +50,7 @@ export default function App() {
   const [usuario, setUsuario] = useState(lerSessao);
   const [aba, setAba] = useState('dashboard');
   const [tema, setTema] = useState(lerTema);
+  const [confirmLogout, setConfirmLogout] = useState(false);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', tema);
@@ -174,7 +175,7 @@ export default function App() {
               <div className="sidebar-user-nome">{usuario.nome}</div>
               <div className="sidebar-user-perfil">{usuario.perfil}</div>
             </div>
-            <button className="btn-logout-icon" onClick={handleLogout} title="Sair do sistema">
+            <button className="btn-logout-icon" onClick={() => setConfirmLogout(true)} title="Sair do sistema">
               {ICONS.sair}
             </button>
           </div>
@@ -237,6 +238,22 @@ export default function App() {
           />
         </div>
       </main>
+
+      {confirmLogout && (
+        <div className="modal-overlay" onClick={() => setConfirmLogout(false)}>
+          <div className="modal-box" style={{ maxWidth: 360, textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+            <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'rgba(220,38,38,.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+              <svg viewBox="0 0 24 24" style={{ width: 26, height: 26, fill: '#DC2626' }}><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
+            </div>
+            <h3 style={{ fontSize: 17, fontWeight: 700, color: 'var(--gray-800)', marginBottom: 6 }}>Sair do sistema?</h3>
+            <p style={{ fontSize: 13, color: 'var(--gray-600)', marginBottom: 24 }}>Você será desconectado e precisará fazer login novamente.</p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setConfirmLogout(false)} style={{ flex: 1, height: 42, borderRadius: 10, border: '2px solid var(--gray-200)', background: 'transparent', color: 'var(--gray-800)', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>Cancelar</button>
+              <button onClick={handleLogout} style={{ flex: 1, height: 42, borderRadius: 10, border: 'none', background: '#DC2626', color: '#fff', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>Sair</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
